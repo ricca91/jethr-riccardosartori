@@ -52,7 +52,7 @@ Queste assunzioni non sono note a piè pagina: devono apparire nella UI e nel RE
 
 Per la generalità degli iscritti FPLD, l'INPS indica contribuzione IVS complessiva 33%, di cui **23,81% a carico del datore** e **9,19% a carico del lavoratore**. L'1% aggiuntivo è a carico del lavoratore sulla quota di retribuzione oltre la prima fascia pensionabile. [INPS, circolare n. 101/2024](https://www.inps.it/it/it/inps-comunica/atti/circolari-messaggi-e-normativa/dettaglio.circolari-e-messaggi.2024.11.circolare-numero-101-del-29-11-2024_14714.html)
 
-Nel 2026 la prima fascia oltre cui scatta l'1% è **56.224 euro**; il massimale annuo della base contributiva e pensionabile per chi è privo di anzianità contributiva al 31 dicembre 1995 (o optante per il contributivo) è **122.295 euro**. [INPS, circolare n. 27/2026](https://www.inps.it/it/it/inps-comunica/atti/circolari-messaggi-e-normativa/dettaglio.circolari-e-messaggi.2026.03.circolare-numero-27-del-11-03-2026_15198.html)
+Nel 2026 la prima fascia oltre cui scatta l'1% è **56.224 euro**; il massimale annuo della base contributiva e pensionabile per chi è privo di anzianità contributiva al 31 dicembre 1995 (o optante per il contributivo) è **122.295 euro** (122.295,40 arrotondati a 122.295,00). [INPS, circolare n. 6/2026](https://www.inps.it/it/it/inps-comunica/atti/circolari-messaggi-e-normativa/dettaglio.circolari-e-messaggi.2026.01.circolare-numero-6-del-30-01-2026_15151.html)
 
 Formula annuale, nel sotto-caso più semplice e fino al massimale applicabile:
 
@@ -246,6 +246,6 @@ Questo è abbastanza rigoroso per dimostrare comprensione del dominio senza fing
 - [Legge di bilancio 2025, L. 207/2024](https://www.normattiva.it/eli/stato/LEGGE/2024/12/30/207/CONSOLIDATED/20251219) — scaglioni, detrazione lavoro, somma non imponibile e detrazione aggiuntiva.
 - [TUIR, art. 13 — MEF/Documentazione economica e finanziaria](https://def.giustiziatributaria.gov.it/DocTribFrontend/getAttoNormativoDetail.do?ACTION=getArticolo&articolo=Articolo+13&codiceOrdinamento=0000000000000130000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000&id=%7B31D694E8-4398-4030-873B-FEAF5A6647F9%7D) — formule dettagliate della detrazione.
 - [TUIR, art. 51 — Normattiva](https://www.normattiva.it/uri-res/N2Ls?urn%3Anir%3Apresidente.repubblica%3Adecreto%3A1986%3B917~art51=) — reddito di lavoro dipendente ed esclusione contributi obbligatori.
-- [INPS, circolare n. 27/2026](https://www.inps.it/it/it/inps-comunica/atti/circolari-messaggi-e-normativa/dettaglio.circolari-e-messaggi.2026.03.circolare-numero-27-del-11-03-2026_15198.html) — soglia 1% e massimale 2026.
+- [INPS, circolare n. 6/2026](https://www.inps.it/it/it/inps-comunica/atti/circolari-messaggi-e-normativa/dettaglio.circolari-e-messaggi.2026.01.circolare-numero-6-del-30-01-2026_15151.html) — soglia 1% e massimale 2026.
 - [Regione Lombardia — addizionale regionale IRPEF](https://www.regione.lombardia.it/bollo-auto-e-tributi-regionali/red-addizionale-regionale-irpef) — aliquote regionali e sostituto d'imposta.
 - [Comune di Milano — addizionale comunale IRPEF](https://www.comune.milano.it/argomenti/tributi/addizionale-comunale-irpef) — aliquota, soglia e acconto.
