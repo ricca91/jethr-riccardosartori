@@ -1201,7 +1201,7 @@ body.jet-base{background:var(--jet-surface-ivory);margin:0;padding-bottom:104px}
 .flowsvg text{fill:var(--jet-text-muted);font-size:inherit}
 .flowsvg text.n{font-weight:700;fill:var(--jet-text);font-variant-numeric:tabular-nums}
 .flowsvg .band{cursor:pointer}
-.flowsvg .band:hover rect,.flowsvg .band:focus rect{filter:brightness(1.08)}
+.flowsvg .band:hover,.flowsvg .band:focus{filter:brightness(1.08)}
 .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--jet-text-regular)}
 .legend i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:7px;vertical-align:-1px}
 .stackbar{display:flex;width:100%;height:40px;border-radius:8px;overflow:hidden}
@@ -1439,11 +1439,10 @@ function sankey(res,h,fs){
     ${band('contributi',rib(x1+NW,yRal,yRal+hCo,x2,yCo,yCo+hCo,C.contrib)+node(x2,yCo,hCo,C.contrib),`Contributi ${eur(co)}`)}
     ${rib(x1+NW,yRal+hCo,yRal+hRal,x2,yIm,yIm+hIm,'var(--_ref---color--gray-scale--200)')}
     ${band('imposte',rib(x2+NW,yIm,yIm+hTx,x3,yTx,yTx+hTx,C.tax)+node(x3,yTx,hTx,C.tax),`Imposte ${eur(tx)}`)}
-    ${rib(x2+NW,yIm+hTx,yIm+hIm,x3,yNe,yNe+(hIm-hTx),C.netto)}
+    ${band('netto',rib(x2+NW,yIm+hTx,yIm+hIm,x3,yNe,yNe+(hIm-hTx),C.netto)+node(x3,yNe,hNe,C.netto),`Netto ${eur(ne)}`)}
     ${ig>0?band('integrazioni',rib(x1+NW,yIg,yIg+hIg,x3,yNe+(hIm-hTx),yNe+hNe,C.integr)+node(x1,yIg,hIg,C.integr),`Integrazioni ${eur(ig)}`):''}
     ${node(x1,yRal,hRal,'var(--jet-black)')}
     ${node(x2,yIm,hIm,'var(--_ref---color--gray-scale--300)')}
-    ${band('netto',node(x3,yNe,hNe,C.netto),`Netto ${eur(ne)}`)}
     ${lab(x1,yRal,'RAL',ral,'start')}
     ${ig>0?lab(x1,yIg,'Integrazioni di legge',ig,'start'):''}
     ${lab(x2,yCo,'Contributi',co,'start')}
