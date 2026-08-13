@@ -320,6 +320,19 @@ test.describe('C — non-regressione',()=>{
   /* Golden: rigenerato dal motore, non copiato. Congela il comportamento
      attuale nei punti di riferimento. Non dice che sono giusti — lo dice
      la categoria A. */
+  /* Il campo `fonte` di ogni voce e' una chiave che la pagina usa per pescare
+     la citazione dalla tabella FONTI. Le due cose vivono in file diversi:
+     rinominare una chiave qui rompe il pannello del dettaglio in silenzio.
+     Questo test blocca l'insieme delle chiavi che il motore puo' emettere. */
+  test('le chiavi delle fonti sono quelle che la pagina si aspetta',()=>{
+    const attese=['inps101','inps6','l199','tuir13','l207c4','l207c6','dl3','lomb','mi'];
+    const viste=new Set();
+    for(let ral=0;ral<=200000;ral+=500)
+      for(const v of calcola(String(ral),13).voci)viste.add(v.fonte);
+    for(const k of viste)assert.ok(attese.includes(k),`fonte sconosciuta: ${k}`);
+    assert.deepEqual([...viste].sort(),attese.filter(k=>viste.has(k)).sort());
+  });
+
   test('golden — netto annuo nei punti di riferimento',()=>{
     const golden={
       '0':0,           '9000':8753.18,     '15000':14197.95,   '20000':17432.53,
