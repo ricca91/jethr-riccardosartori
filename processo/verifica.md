@@ -102,6 +102,8 @@ su ciò che già sappiamo e nessuna su ciò che conta.
 | Navigazione da tastiera | ✅ dopo una correzione: le fasce del flusso sono elementi SVG e non hanno il metodo `click()`, quindi Invio sulla fascia lanciava un errore e non apriva niente |
 | Fuoco sul pannello della voce | ✅ dopo una correzione: la pagina si ridisegna sostituendo l'HTML, quindi il fuoco tornava a inizio pagina a ogni voce aperta. Ora viene restituito al comando che l'aveva. Le righe della catena usano `aria-expanded` e `aria-controls`, non `aria-pressed`: aprono un pannello, non attivano uno stato |
 | Contrasto | ✅ dopo una correzione: 42 coppie testo/sfondo misurate su due stati, zero sotto il minimo AA. L'etichetta bianca dentro la barra verde stava a 2,03 contro un minimo di 4,5 ed è passata a inchiostro scuro |
+| La modale dell'easter egg | ✅ `<dialog>` nativo. Il fuoco entra dentro all'apertura e **torna da solo al campo RAL** alla chiusura, senza codice che lo gestisca. Si chiude con Esc o cliccando fuori. Nessun sbordo a 390 px con la modale aperta. Non ha un bottone di chiusura: per una battuta di due righe Esc basta |
+| La nota di lavoro | ✅ `come-ho-lavorato.html` verificata come la pagina principale: nessun sbordo a 390 px, nessuna richiesta di rete, caratteri incorporati. I suoi rimandi al repo funzionano perché il repo è pubblico |
 
 ## Cosa NON è provato
 

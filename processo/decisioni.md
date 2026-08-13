@@ -58,6 +58,32 @@ dell'informazione, un selettore per confrontarle e una finestra regolabile per g
 soglia. Servivano a scegliere. Fatta la scelta, sono uscite dalla pagina: quello che resta è
 una versione sola, senza interruttori che non interessano a chi legge.
 
+## Tre decisioni prese dopo la chiusura dei ticket
+
+Il registro si ferma dove finiscono i ticket, ma la pagina è andata avanti ancora un giro. Dove
+il prodotto e il registro non coincidono più, comanda il prodotto — ed è scritto qui invece che
+correggendo i ticket a posteriori.
+
+**C'è un tetto all'input.** Il ticket [#4](https://github.com/ricca91/jethr-riccardosartori/issues/4)
+lo escludeva: nessun limite, e una battuta sopra il milione. Ora il calcolatore si ferma a
+**1.000.000 €**. Il motivo è lo stesso che regge tutto il resto: su cifre così il modello a
+input unico non descrive più niente di reale, e un numero preciso su un caso fuori perimetro
+è peggio di un rifiuto onesto. Lo spazio liberato dalla battuta è occupato da un avviso che
+serve davvero — sopra **122.295 €** il risultato assume nessuna anzianità contributiva al
+31 dicembre 1995, ed è l'unico punto in cui la sola RAL non basta.
+
+**La riconciliazione non è più stampata a schermo.** Il ticket
+[#3](https://github.com/ricca91/jethr-riccardosartori/issues/3) la elencava fra i pattern da
+adottare, e per un po' la pagina mostrava la riga `RAL − contributi − imposte = netto`. È
+uscita perché ripeteva ad alta voce quello che la tabella sopra già faceva vedere. **La guardia
+resta dov'era utile**: `motore.js` calcola `riconciliazione.verificata` a ogni chiamata e le
+prove la controllano. Quello che è sparito è la dimostrazione, non il controllo.
+
+**C'è una nota di lavoro, e un easter egg.** `prototipo/come-ho-lavorato.html` racconta
+perimetro, modello, verifica e limiti a chi apre la demo senza passare da questo repo — le
+stesse cose che stanno qui, per un lettore che è arrivato dall'altra parte. L'easter egg si
+apre su una RAL precisa, e chi conosce Jet HR sa già quale.
+
 ## Se un link di un ticket non porta da nessuna parte
 
 I ticket sono stati scritti mentre il lavoro procedeva, quindi citano la repo **com'era in quel

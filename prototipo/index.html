@@ -1744,8 +1744,12 @@ document.addEventListener('click',e=>{
   if(t.hasAttribute('data-voce')){
     st.aperta=st.aperta===t.dataset.voce?null:t.dataset.voce;return render(true);}
   if(t.hasAttribute('data-band')){
-    const map={contributi:'ivs',imposte:'lorda',netto:null,integrazioni:'somma'};
-    st.aperta=map[t.dataset.band];render(true);
+    // Il netto non e' una voce della catena: e' il totale. La sua fascia porta al
+    // dettaglio senza svuotare il pannello, cosi' il clic non sembra fallito.
+    const map={contributi:'ivs',imposte:'lorda',integrazioni:'somma'};
+    const voce=map[t.dataset.band];
+    if(voce)st.aperta=voce;
+    render(true);
     document.getElementById('dettaglio')?.scrollIntoView({
       behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});
     if(st.aperta)rendiFuoco(`tr[data-voce="${st.aperta}"] .lbl`);

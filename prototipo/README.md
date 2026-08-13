@@ -13,6 +13,7 @@ prima del primo risultato.
 | File | Che cos'è |
 |---|---|
 | `index.html` | la pagina, autoportante |
+| `come-ho-lavorato.html` | la nota di lavoro: perimetro, modello, verifica, limiti |
 | `motore.js` | il calcolo, separato per poterlo provare fuori dal browser |
 | `motore.test.js` | la matrice di prova |
 | `../processo/verifica.md` | che cosa è provato, come, e che cosa non lo è |
@@ -22,6 +23,8 @@ prima del primo risultato.
 Doppio clic su `index.html`, tenendo `motore.js` nella stessa cartella.
 Nessuna dipendenza, nessun passo di build, nessuna richiesta di rete: i caratteri
 Wix Madefor Display sono incorporati nel file, quindi la pagina funziona anche offline.
+Vale anche per `come-ho-lavorato.html`, che porta la propria copia dei caratteri per
+restare apribile da sola.
 
 Il motore è uno script classico e non un modulo ES proprio per questo: i moduli non si
 caricano da `file://`, gli script classici sì.
@@ -66,6 +69,12 @@ dell'art. 13, dove la norma lo impone.
 
 Versione delle regole: `regole-2026-v1`. Fonti primarie, tutte citate nella pagina:
 leggi di bilancio 2025 e 2026, TUIR, circolari INPS, Regione Lombardia, Comune di Milano.
+
+L'input accetta RAL da 0 a **1.000.000 €**. Oltre, il calcolatore si ferma e lo dice:
+il modello non è pensato per quelle cifre e restituire un numero preciso su un caso
+fuori perimetro sarebbe peggio che non rispondere. Sopra **122.295 €** il risultato
+compare con l'avviso che assume nessuna anzianità contributiva al 31 dicembre 1995 —
+l'unico punto in cui la sola RAL non basta più.
 
 Il selettore **12/13 mensilità** si applica senza ricalcolare nulla: divide un netto annuo
 già calcolato. È la dimostrazione a schermo di una tesi del modello — le mensilità sono
