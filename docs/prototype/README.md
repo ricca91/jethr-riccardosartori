@@ -12,14 +12,14 @@ prima del primo risultato.
 
 | File | Che cos'è |
 |---|---|
-| `ia-ral-netto-v2.html` | la pagina, autoportante |
+| `index.html` | la pagina, autoportante |
 | `motore.js` | il calcolo, separato per poterlo provare fuori dal browser |
 | `motore.test.js` | la matrice di prova |
 | `../verifica.md` | che cosa è provato, come, e che cosa non lo è |
 
 ## Come si apre
 
-Doppio clic su `ia-ral-netto-v2.html`, tenendo `motore.js` nella stessa cartella.
+Doppio clic su `index.html`, tenendo `motore.js` nella stessa cartella.
 Nessuna dipendenza, nessun passo di build, nessuna richiesta di rete: i caratteri
 Wix Madefor Display sono incorporati nel file, quindi la pagina funziona anche offline.
 
@@ -71,3 +71,11 @@ Il selettore **12/13 mensilità** si applica senza ricalcolare nulla: divide un 
 già calcolato. È la dimostrazione a schermo di una tesi del modello — le mensilità sono
 presentazione, non calcolo. Se richiedessero un ricalcolo, la pagina direbbe il contrario
 di quello che afferma.
+
+## Come si pubblica
+
+La demo è un deploy statico della sola cartella, senza passo di build:
+
+```
+vercel deploy --prod docs/prototype
+```
