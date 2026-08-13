@@ -1,103 +1,73 @@
-# Prototipo #5 — architettura dell'informazione
+# Dove va la tua RAL — calcolatore netto 2026
 
-Codice **usa e getta**. Non è il prodotto e non va promosso in `main`: serve solo a rendere
-reagibile la domanda del ticket
-[#5](https://github.com/ricca91/jethr-riccardosartori/issues/5) — *quale architettura
-dell'informazione traduce la tesi «ti mostro dove va la tua RAL»*.
+Una pagina che risponde a una domanda sola: di una retribuzione annua lorda, quanto resta
+in tasca, dove finisce il resto e perché.
+
+Un solo dato da inserire, la RAL. Anno, città e contratto non sono selezionabili: sono
+dichiarati in cima alla pagina — **regole 2026, Milano, settore privato, tempo
+indeterminato, anno intero**. Un caso solo, spiegato per intero, invece di un modulo lungo
+prima del primo risultato.
+
+## I file
+
+| File | Che cos'è |
+|---|---|
+| `ia-ral-netto-v2.html` | la pagina, autoportante |
+| `motore.js` | il calcolo, separato per poterlo provare fuori dal browser |
+| `motore.test.js` | la matrice di prova |
+| `../verifica.md` | che cosa è provato, come, e che cosa non lo è |
 
 ## Come si apre
 
-Un solo file, nessuna dipendenza: apri `ia-ral-netto.html` con un doppio clic.
+Doppio clic su `ia-ral-netto-v2.html`, tenendo `motore.js` nella stessa cartella.
+Nessuna dipendenza, nessun passo di build, nessuna richiesta di rete: i caratteri
+Wix Madefor Display sono incorporati nel file, quindi la pagina funziona anche offline.
 
-## Le tre varianti
+Il motore è uno script classico e non un modulo ES proprio per questo: i moduli non si
+caricano da `file://`, gli script classici sì.
 
-Si cambia dalla barra in basso o con i tasti ← →. Lo stato è serializzato nell'URL
-(`?variant=&ral=&m=&spiega=&w=&tab=`), quindi ogni schermata è condivisibile e ricaricabile.
+Lo stato sta nell'URL (`?ral=&m=&calc=1`), quindi ogni schermata è condivisibile.
 
-| | Variante | Eroe della pagina | Affordance principale |
-|---|---|---|---|
-| **A** | Il flusso | il money flow Sankey, subito sotto l'input | si scorre; si clicca una banda per scendere nel dettaglio |
-| **B** | Il libro mastro | la tabella a operatori firmati, in due colonne | ogni riga si apre in linea con formula e fonte |
-| **C** | La risposta secca | un numero solo, grande | le tre schede (flusso / dettaglio / metodo) |
+## Come si provano i numeri
 
-Controlli trasversali nella barra: **Spiegami il calcolo** e la **finestra di visibilità delle
-soglie** (`mai` · 100 · 500 · 1.500 · 4.000 €), cioè la costante che #4 ha lasciato
-esplicitamente alla presentazione.
+```
+node --test docs/prototype/motore.test.js
+```
 
-## Il motore è quello vero
+Node 18 o successivo, zero dipendenze. Lo stesso file `motore.js` che gira nella pagina
+gira in Node: nessuna logica duplicata fra pagina e prove.
 
-Il calcolo implementa il contratto di #4 (`regole-2026-v1`) in aritmetica decimale a virgola
-fissa su `BigInt`, scala 1e-8, mai float binario: tredici passi nell'ordine vincolante,
-troncamento a 4 decimali solo sui rapporti dell'art. 13, netto definito come somma delle voci
-arrotondate. I numeri a schermo sono quindi reali, non mockup.
+Dettagli in [`docs/verifica.md`](../verifica.md).
 
-Verifiche eseguite su questa implementazione:
+## Le tre scelte che spiegano la pagina
 
-- le sei voci a RAL 35.000 coincidono al centesimo con la tabella di riconciliazione di #2;
-- riconciliazione verificata su 1.460 campioni fra 0 e 200.000 €, zero fallimenti;
-- i **sette salti** di #4 si ripresentano tutti, con gli stessi importi;
-- nessun overflow orizzontale a 390 px in nessuna variante e nessuna scheda.
+**1. La risposta prima di tutto, poi il resto in tre livelli.** Netto mensile grande e
+subito; sotto, il flusso del denaro in scala; sotto ancora, la catena voce per voce con
+formula, base di calcolo e fonte normativa di ogni riga. Chi vuole solo il numero si ferma
+alla prima schermata; chi non si fida scende fino alla norma.
 
-Due comportamenti sono stati corretti rispetto a una lettura ingenua del contratto:
+**2. Le soglie si mostrano, non si nascondono.** In alcuni punti un euro lordo in più fa
+*scendere* il netto: a 25.327,62 € di RAL finisce l'esenzione dell'addizionale comunale
+di Milano e il netto perde 184 € l'anno. È un'esenzione, non una franchigia. Un
+calcolatore che liscia quel gradino mente; questo lo calcola e lo spiega nelle FAQ.
 
-1. **Capienza.** Le detrazioni non sono rimborsabili: la voce mostra la quota *effettivamente
-   usata* (con la spettante in chiaro nella spiegazione), altrimenti a RAL 0 il netto risultava
-   di 1.955 € invece che 0.
-2. **Input negativo** bloccato con messaggio dedicato, distinto dal non numerico.
+**3. Ogni euro torna, per costruzione.** Il netto non è un totale calcolato a parte e poi
+confrontato con le voci: **è** la somma delle voci arrotondate. La verifica gira a ogni
+ricalcolo, non solo nelle prove, quindi la pagina non può mostrare una tabella che non
+chiude.
 
+## Il calcolo
 
----
+Aritmetica decimale a virgola fissa su `BigInt`, scala 1e-8, mai virgola mobile binaria.
+Tredici passi in ordine vincolante: contributi, imponibile, IRPEF lorda per scaglioni,
+detrazioni con la capienza, IRPEF netta, addizionali — dovute solo se l'IRPEF netta è
+positiva — e integrazioni di legge. Troncamento a quattro decimali solo sui rapporti
+dell'art. 13, dove la norma lo impone.
 
-# v2 — dopo il primo giro di feedback
+Versione delle regole: `regole-2026-v1`. Fonti primarie, tutte citate nella pagina:
+leggi di bilancio 2025 e 2026, TUIR, circolari INPS, Regione Lombardia, Comune di Milano.
 
-`ia-ral-netto-v2.html`. Base scelta: la **C** del primo giro (risposta prima di tutto).
-Quattro cambiamenti sostanziali.
-
-## 1. Aspetto Jet HR, non più neutro
-
-Non è uno screenshot copiato: la pagina è costruita sui **token estratti dal loro sito**
-(`candidature/jethr/design/`), tre strati di variabili CSS più la libreria di 108 componenti
-`jet-*`. Wix Madefor Display è incorporato nel file come data URI, quindi il prototipo gira
-offline senza CDN. Nero verdastro `#11150a`, grigi caldi tirati verso l'oliva, bordi da 1px
-al posto delle ombre, raggio 6px sui controlli e 16–24px sui contenitori.
-
-Il **lime evidenzia, non riempie**: compare solo nel badge dell'anno, nel trattino
-dell'occhiello, nella voce attiva della catena e nelle integrazioni di legge. Il flusso usa un
-verde Jet per ciò che resta, un bruno per ciò che se ne va e un grigio caldo per i contributi —
-che non sono una tassa e non devono sembrarlo.
-
-## 2. Bottone «Calcola»
-
-Prima si compila, poi si calcola. Il risultato è **committed**: cambiare la RAL dopo il calcolo
-non aggiorna i numeri di nascosto, mostra un avviso che invita a ricalcolare. Invio nel campo
-equivale a premere Calcola.
-
-Unica eccezione deliberata: il selettore **12/13 si applica subito**, senza ricalcolare. È la
-dimostrazione a schermo della tesi di #4 — le mensilità sono presentazione, non calcolo.
-Se richiedessero un ricalcolo, la pagina direbbe il contrario di quello che afferma.
-
-## 3. Sezioni impilate al posto delle schede
-
-Le tre schede della v1 erano strette e nascondevano il contenuto. Ora sono **cinque sezioni
-in colonna**, larghe, con occhiello, titolo e sommario, nell'ordine della progressive
-disclosure di #3: *Livello 1 — la risposta*, *Livello 2 — il flusso*, *Livello 3 — il dettaglio*,
-*Metodo e fonti*, *Domande frequenti*. La navigazione ad ancore le lega con scrollspy.
-
-Il dettaglio sfrutta la larghezza: la catena a operatori firmati a sinistra, e a destra un
-pannello che mostra formula, base e fonte della voce selezionata.
-
-Prima di calcolare la pagina non è vuota: mostra *Cifre chiave 2026* e le FAQ, come fa Stipendee.
-
-## 4. Le tre versioni ora variano sulla navigazione
-
-| | Versione | Come si naviga il risultato |
-|---|---|---|
-| **A** | Indice laterale | colonna sticky a sinistra con indice e netto annuo sempre visibile |
-| **B** | Barra di ancore | barra sticky in cima con mini-riepilogo, sezioni a fasce alternate bianco/avorio |
-| **C** | Riepilogo persistente | barra nera sticky con netto annuo e media, ancore incluse |
-
-## Verifiche
-
-Motore **identico alla v1** e non toccato: 26.032,17 a RAL 35.000, riconciliazione su 1.460
-campioni senza fallimenti. Nessun overflow orizzontale a 390 px in nessuna versione, né prima
-né dopo il calcolo, incluso il caso RAL a sette cifre.
+Il selettore **12/13 mensilità** si applica senza ricalcolare nulla: divide un netto annuo
+già calcolato. È la dimostrazione a schermo di una tesi del modello — le mensilità sono
+presentazione, non calcolo. Se richiedessero un ricalcolo, la pagina direbbe il contrario
+di quello che afferma.
