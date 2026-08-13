@@ -1664,7 +1664,7 @@ function commit(silenzioso){
   else if(Number.isNaN(v)){st.errore='Solo cifre: usa la virgola per i decimali, per esempio 35.000,50.';st.res=null;}
   else if(Number(v)<0){st.errore='La RAL non può essere negativa.';st.res=null;}
   else if(Number(v)>9999999){st.errore='Oltre 9.999.999 € il calcolo esce dal perimetro dichiarato.';st.res=null;}
-  else{st.res=calcola(v,st.mensilita);st.dirty=false;st.eggPending=Number(v)>3000000;
+  else{st.res=calcola(v,st.mensilita);st.dirty=false;st.eggPending=Number(v)>=4700000;
     if(!st.aperta)st.aperta='ivs';}   // mostra subito a cosa serve il pannello
   if(!silenzioso)render();
 }
