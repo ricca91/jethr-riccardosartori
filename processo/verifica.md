@@ -6,11 +6,11 @@ difendibile il resto — che cosa **non** è provato.
 ## Come si esegue
 
 ```
-node --test docs/prototype/motore.test.js
+node --test prototipo/motore.test.js
 ```
 
 Node 18 o successivo. Nessuna dipendenza, nessun `package.json`, niente da installare.
-Il motore (`docs/prototype/motore.js`) è uno script classico: la stessa riga di codice
+Il motore (`prototipo/motore.js`) è uno script classico: la stessa riga di codice
 gira nella pagina aperta con un doppio clic e in Node, senza duplicati.
 
 Stato al 13 agosto 2026: **32 prove, tutte verdi** (Node v22.22.2).

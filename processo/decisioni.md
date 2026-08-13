@@ -58,9 +58,28 @@ dell'informazione, un selettore per confrontarle e una finestra regolabile per g
 soglia. Servivano a scegliere. Fatta la scelta, sono uscite dalla pagina: quello che resta è
 una versione sola, senza interruttori che non interessano a chi legge.
 
+## Se un link di un ticket non porta da nessuna parte
+
+I ticket sono stati scritti mentre il lavoro procedeva, quindi citano la repo **com'era in quel
+momento**. Due cose sono cambiate alla consegna, e vale la pena saperlo prima di cliccare:
+
+- **I percorsi.** I file stavano sotto `docs/`. Ora il prodotto è in `prototipo/` e il lavoro
+  che c'è dietro in `processo/`. Le citazioni dentro i ticket non sono state riscritte: sono la
+  fotografia di quando sono state prese le decisioni.
+- **I rami di lavoro.** `prototype/ia-ral-netto` e `research/competitor-*` sono stati rimossi
+  una volta uniti. I commit restano nella storia del repo.
+
+Niente di quello che serve per valutare il lavoro sta in quei link: sta in questa cartella e in
+`prototipo/`.
+
 ## Dove finisce il registro
 
-Nel codice. La rifinitura è la [PR #10](https://github.com/ricca91/jethr-riccardosartori/pull/10),
-che porta la pagina da prototipo esplorativo ad artefatto consegnabile — motore estratto,
-matrice di prova, tre correzioni di accessibilità trovate aprendo davvero la pagina invece
-che leggendo il codice.
+Nel codice, in tre pull request:
+
+- [#10](https://github.com/ricca91/jethr-riccardosartori/pull/10) — la rifinitura: motore
+  estratto, matrice di prova, tre correzioni di accessibilità trovate aprendo davvero la pagina
+  invece che leggendo il codice.
+- [#11](https://github.com/ricca91/jethr-riccardosartori/pull/11) — la porta d'ingresso, e la
+  correzione della fonte INPS: i valori del massimale erano giusti, la circolare citata no.
+- [#12](https://github.com/ricca91/jethr-riccardosartori/pull/12) — la struttura attuale della
+  repo e il curriculum.
