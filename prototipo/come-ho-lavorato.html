@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Assunzioni, metodo, calcolo e verifiche del prototipo Dove va la tua RAL.">
+<title>Come ho costruito il calcolatore — Dove va la tua RAL</title>
+<style>
+:root{--ink:#11150a;--muted:#585b54;--line:#dce0da;--paper:#fff;--ivory:#f8faf5;--lime:#c3e94d;--brown:#76543e;--green:#7da25a}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--ivory);color:var(--ink);font-family:"Wix Madefor Display",Inter,system-ui,sans-serif;line-height:1.55}
+a{color:inherit;text-underline-offset:3px}.wrap{width:min(920px,calc(100% - 32px));margin:auto}.top{padding:20px 0;border-bottom:1px solid var(--line);background:#ffffffee;position:sticky;top:0;z-index:2;backdrop-filter:blur(8px)}
+.top .wrap{display:flex;justify-content:space-between;align-items:center;gap:20px}.back{font-weight:650;text-decoration:none}.nav{display:flex;gap:18px;font-size:14px}.nav a{text-decoration:none;color:var(--muted)}
+header{padding:82px 0 64px}header .eyebrow,.section-eye{font-size:12px;font-weight:750;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}header .eyebrow:before,.section-eye:before{content:"";display:inline-block;width:22px;height:2px;background:var(--lime);vertical-align:middle;margin-right:9px}
+h1{font-size:clamp(42px,7vw,72px);line-height:1.02;letter-spacing:-.045em;margin:16px 0 20px;max-width:13ch}header p{font-size:20px;max-width:66ch;color:var(--muted);margin:0}
+section{padding:64px 0;border-top:1px solid var(--line);scroll-margin-top:70px}h2{font-size:clamp(30px,4vw,44px);line-height:1.08;letter-spacing:-.035em;margin:12px 0 16px}h3{font-size:20px;margin:0 0 8px}.lede{font-size:18px;color:var(--muted);max-width:68ch;margin:0 0 30px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px}.card p{margin:0;color:var(--muted)}
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden}.step{background:#fff;padding:20px 16px;min-height:145px}.step b{display:block;font-size:30px;margin-bottom:18px}.step span{font-size:14px;color:var(--muted)}
+.equation{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:22px;overflow:auto;white-space:nowrap}.proof{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.proof .card{border-top:5px solid var(--green)}.proof .card:nth-child(2){border-top-color:var(--brown)}.proof .card:nth-child(3){border-top-color:var(--lime)}
+.limit{background:#fff;border:1px solid var(--line);border-left:5px solid var(--brown);border-radius:12px;padding:20px;margin-top:16px}.limit p{margin:6px 0 0;color:var(--muted)}
+.links{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}.button{display:inline-block;background:var(--ink);color:#fff;border-radius:7px;padding:12px 17px;text-decoration:none;font-weight:650}.button.alt{background:#fff;color:var(--ink);border:1px solid var(--line)}footer{padding:42px 0 70px;color:var(--muted);font-size:14px}
+@media(max-width:720px){.nav{display:none}.grid,.proof{grid-template-columns:1fr}.flow{grid-template-columns:1fr}.step{min-height:0;display:grid;grid-template-columns:42px 1fr;gap:8px;align-items:start}.step b{font-size:20px;margin:0}header{padding:54px 0 46px}}
+</style>
+</head>
+<body>
+<nav class="top" aria-label="Navigazione"><div class="wrap"><a class="back" href="index.html">← Torna al calcolatore</a><div class="nav"><a href="#perimetro">Perimetro</a><a href="#calcolo">Calcolo</a><a href="#verifica">Verifica</a><a href="#limiti">Limiti</a></div></div></nav>
+<main>
+<header class="wrap"><div class="eyebrow">Nota di lavoro</div><h1>Prima le regole, poi la pagina</h1><p>Questo prototipo non prova a coprire ogni busta paga. Prende un caso standard, rende esplicite le assunzioni e lascia ispezionare ogni passaggio dalla RAL al netto.</p></header>
+
+<section id="perimetro"><div class="wrap"><div class="section-eye">01 — Perimetro</div><h2>Un caso solo, spiegato per intero</h2><p class="lede">Con la sola RAL non esiste un netto universalmente corretto. Ho quindi fissato ciò che normalmente richiederebbe altri input.</p><div class="grid">
+<article class="card"><h3>Incluso</h3><p>Regole 2026, Milano, impiegato privato a tempo indeterminato, rapporto per 365 giorni, un solo datore e un solo reddito.</p></article>
+<article class="card"><h3>Escluso</h3><p>Familiari a carico, altri redditi, benefit, premi, fondi di settore, previdenza complementare, assunzioni in corso d'anno e agevolazioni personali.</p></article>
+<article class="card"><h3>Definizione operativa</h3><p>RAL = imponibile previdenziale = imponibile fiscale prima dei contributi. È una semplificazione dichiarata, necessaria per usare un solo input.</p></article>
+<article class="card"><h3>Tipo di risultato</h3><p>Netto annuale di competenza e sua media su 12 o 13 mensilità. Non è la previsione del singolo cedolino né del cash accreditato mese per mese.</p></article>
+</div></div></section>
+
+<section id="calcolo"><div class="wrap"><div class="section-eye">02 — Modello</div><h2>La normativa diventa un ordine di operazioni</h2><p class="lede">Ogni voce conserva base di calcolo, formula e fonte. L'interfaccia non contiene una seconda versione delle regole: usa lo stesso motore provato in Node.</p><div class="flow">
+<div class="step"><b>1</b><span>Contributi IVS e contributo aggiuntivo</span></div><div class="step"><b>2</b><span>Imponibile fiscale dopo i contributi</span></div><div class="step"><b>3</b><span>IRPEF lorda per scaglioni</span></div><div class="step"><b>4</b><span>Detrazioni, capienza e integrazioni</span></div><div class="step"><b>5</b><span>Addizionali regionale e comunale</span></div>
+</div><p class="equation">RAL − contributi − imposte + integrazioni = netto annuo</p><p class="lede">Il motore usa aritmetica decimale a virgola fissa su <code>BigInt</code>. I rapporti dell'art. 13 vengono troncati a quattro decimali dove previsto; le voci sono arrotondate al centesimo e il netto è la loro somma.</p></div></section>
+
+<section id="verifica"><div class="wrap"><div class="section-eye">03 — Verifica</div><h2>Test verdi non significa automaticamente numeri giusti</h2><p class="lede">Per questo le 32 prove sono separate in tre categorie, ciascuna con una promessa diversa.</p><div class="proof">
+<article class="card"><h3>A — Correttezza</h3><p>Poche ancore calcolate a mano contro la norma: la catena completa a 35.000 €, capienza, esenzione comunale e massimale.</p></article>
+<article class="card"><h3>B — Soglie</h3><p>Sette discontinuità e quattro cambi di pendenza controllati a un centesimo di distanza, verificando anche quale voce cambia.</p></article>
+<article class="card"><h3>C — Regressione</h3><p>2.001 campioni fra 0 e 200.000 €, invarianti e golden values. Provano che il comportamento non cambia, non che la legge sia stata interpretata bene.</p></article>
+</div><div class="links"><a class="button" href="https://github.com/ricca91/jethr-riccardosartori/blob/main/prototipo/motore.test.js">Leggi i test</a><a class="button alt" href="https://github.com/ricca91/jethr-riccardosartori/blob/main/processo/verifica.md">Cosa è e non è provato</a></div></div></section>
+
+<section id="limiti"><div class="wrap"><div class="section-eye">04 — Limiti</div><h2>Dove il modello smette di valere</h2><p class="lede">Esporre i limiti è parte del prodotto: impedisce a un numero preciso di sembrare più certo di quanto sia.</p>
+<div class="limit"><h3>Il 9,19% non vale per ogni dipendente privato</h3><p>Settore, inquadramento INPS, dimensione del datore e fondi speciali possono cambiare la contribuzione. Il prototipo assume FPLD ordinario senza contribuzioni settoriali.</p></div>
+<div class="limit"><h3>Sopra 122.295 € la sola RAL non basta</h3><p>Il massimale contributivo è applicabile a chi non aveva anzianità contributiva al 31 dicembre 1995, o ha optato per il contributivo. Il calcolatore mantiene questa assunzione e la segnala nel risultato.</p></div>
+<div class="limit"><h3>Nessuna validazione professionale</h3><p>Le regole sono state ricavate da fonti primarie e controllate a mano, ma non asseverate da un consulente del lavoro. È un prototipo, non un parere fiscale.</p></div>
+<div class="links"><a class="button" href="index.html?ral=35.000&m=13&calc=1">Apri il caso di riferimento</a><a class="button alt" href="https://github.com/ricca91/jethr-riccardosartori/tree/main/processo">Esplora ricerca e decisioni</a></div>
+</div></section>
+</main><footer><div class="wrap">Prototipo di Riccardo Sartori per il task AI Builder @ Jet HR.</div></footer>
+</body></html>
