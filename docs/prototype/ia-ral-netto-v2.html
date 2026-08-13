@@ -1721,7 +1721,7 @@ function sezioni(res,st){
     {id:'risultato',eye:'Livello 1 — la risposta',t:'Quanto ti resta',
      lede:'Il netto annuo maturato sulla RAL inserita, e la sua media per mensilità.',
      body:`${answerBlock(res)}<div style="margin-top:22px">${kpis(res)}</div>
-       ${noticeSoglie(res,st)}${eegg(res)}`},
+       ${eegg(res)}`},
     {id:'flusso',eye:'Livello 2 — il flusso',t:'Dove va il resto',
      lede:'Le fasce sono in scala: la larghezza di ogni flusso è proporzionale al suo importo. Si parte dalla RAL, non dal costo azienda: questo strumento risponde a «dove vanno i soldi trattenuti sul mio lordo», non a quanto costi all\'azienda. Clicca una fascia per aprirne le voci.',
      body:`${sankey(res,260,13)}<div class="legend" style="margin-top:14px">${legendItems(res)}</div>`},
@@ -1857,7 +1857,7 @@ function soglieVicine(ral,finestra){
 /* ============================================================
    STATO E EVENTI
    ============================================================ */
-const st={ralRaw:'35.000',mensilita:13,variant:'B',finestra:500,sogliaSotto:true,
+const st={ralRaw:'35.000',mensilita:13,variant:'B',finestra:0,sogliaSotto:false,
   aperta:null,attiva:'risultato',res:null,errore:null,dirty:false};
 
 function fromURL(){
@@ -1922,11 +1922,7 @@ function protobar(){
     <span class="vlabel">${st.variant} — ${VARIANTI[st.variant].nome}</span>
     <button data-nav="1" aria-label="Variante successiva">→</button>
     <span class="sep"></span>
-    <label style="display:flex;align-items:center;gap:5px">soglie entro
-      <select data-finestra>${[0,100,500,1500,4000].map(w=>
-        `<option value="${w}" ${st.finestra===w?'selected':''}>${w===0?'mai':fmt0(w)+' €'}</option>`).join('')}
-      </select></label>
-    <button data-giu aria-pressed="${st.sogliaSotto}">anche quelle sotto</button>`;
+    <span class="vtag">B &mdash; versione scelta</span>`;
 }
 document.addEventListener('input',e=>{
   if(e.target.id!=='ral')return;
@@ -1943,7 +1939,6 @@ document.addEventListener('keydown',e=>{
 function cycle(d){const k=Object.keys(VARIANTI);
   st.variant=k[(k.indexOf(st.variant)+d+k.length)%k.length];st.aperta=null;render();}
 document.addEventListener('change',e=>{
-  if(e.target.matches('[data-finestra]')){st.finestra=Number(e.target.value);render(true);}
 });
 document.addEventListener('click',e=>{
   const a=e.target.closest('[data-anchor]');
@@ -1951,12 +1946,11 @@ document.addEventListener('click',e=>{
     document.getElementById(a.dataset.anchor)?.scrollIntoView({
       behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});
     return;}
-  const t=e.target.closest('#go,#reset,[data-nav],[data-giu],[data-m],[data-voce],[data-band]');
+  const t=e.target.closest('#go,#reset,[data-nav],[data-m],[data-voce],[data-band]');
   if(!t)return;
   if(t.id==='go')return commit();
   if(t.id==='reset'){st.res=null;st.ralRaw='';st.aperta=null;st.errore=null;return render();}
   if(t.hasAttribute('data-nav'))return cycle(Number(t.dataset.nav));
-  if(t.hasAttribute('data-giu')){st.sogliaSotto=!st.sogliaSotto;return render(true);}
   if(t.hasAttribute('data-m')){
     st.mensilita=Number(t.dataset.m);
     // mensilita' e' presentazione: si applica subito, senza ricalcolare
