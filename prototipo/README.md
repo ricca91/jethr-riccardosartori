@@ -79,3 +79,13 @@ La demo è un deploy statico della sola cartella, senza passo di build:
 ```
 vercel deploy --prod prototipo
 ```
+
+Il progetto Vercel si chiama `jethr` e risponde su **https://jethr.riccsartori.com**.
+
+Il deploy parte dalla riga di comando, non da un push: il repo **non** è collegato a
+Vercel. `git push` aggiorna GitHub e lascia la demo com'era. Se una copia nuova del repo
+non è ancora agganciata al progetto, la si aggancia una volta sola:
+
+```
+vercel link --yes --project jethr
+```

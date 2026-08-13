@@ -1,6 +1,6 @@
 # Task di selezione AI BUILDER
 
-**Demo:** https://deploy-proto-mu.vercel.app
+**Demo:** https://jethr.riccsartori.com
 
 ## Chi sono
 
