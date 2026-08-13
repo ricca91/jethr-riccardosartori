@@ -1614,7 +1614,7 @@ function pagina(res,st){
         ${s.lede?`<p class="lede">${s.lede}</p>`:''}
         <div class="sec-body">${s.body}</div>
       </div></section>`).join('')}
-    <dialog class="egg-modal" id="egg"><p>Se hai 5.000.000 di RAL l'ultimo problema è lo stipendio netto</p></dialog>`;
+    <dialog class="egg-modal" id="egg"><p>Se hai 3.000.000 di RAL l'ultimo problema è lo stipendio netto</p></dialog>`;
 }
 function vuoto(st){
   return `<div class="pg">${hero()}${form(st)}
@@ -1657,7 +1657,7 @@ function commit(silenzioso){
   else if(Number.isNaN(v)){st.errore='Solo cifre: usa la virgola per i decimali, per esempio 35.000,50.';st.res=null;}
   else if(Number(v)<0){st.errore='La RAL non può essere negativa.';st.res=null;}
   else if(Number(v)>9999999){st.errore='Oltre 9.999.999 € il calcolo esce dal perimetro dichiarato.';st.res=null;}
-  else{st.res=calcola(v,st.mensilita);st.dirty=false;st.eggPending=Number(v)>5000000;
+  else{st.res=calcola(v,st.mensilita);st.dirty=false;st.eggPending=Number(v)>3000000;
     if(!st.aperta)st.aperta='ivs';}   // mostra subito a cosa serve il pannello
   if(!silenzioso)render();
 }
