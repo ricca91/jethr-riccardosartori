@@ -1113,10 +1113,23 @@ body.jet-base{background:var(--jet-surface-ivory);margin:0;padding-bottom:104px}
 .worklink:hover{text-decoration-color:var(--jet-lime);text-decoration-thickness:2px}
 .limit-note{margin-top:18px;background:var(--jet-warning-bg);border:1px solid var(--jet-warning-border);
   border-radius:12px;padding:16px 18px;color:var(--jet-warning-ink);font-size:14px;line-height:1.5}
-.egg-modal{border:0;border-radius:16px;padding:0;max-width:520px;width:calc(100% - 32px);
-  background:var(--jet-black);color:#fff;box-shadow:var(--jet-shadow-modal)}
-.egg-modal::backdrop{background:#11150ab8}
-.egg-modal p{margin:0;padding:34px;font:600 24px/1.25 var(--jet-font);letter-spacing:-.4px;text-wrap:balance}
+.egg-modal{border:1px solid var(--jet-black);border-radius:28px;padding:0;max-width:760px;
+  width:calc(100% - 32px);min-height:390px;overflow:hidden;background:var(--jet-surface-ivory);
+  color:var(--jet-black);box-shadow:0 30px 90px #11150a66}
+.egg-modal::backdrop{background:#11150ab8;backdrop-filter:blur(5px)}
+.egg-modal::before{content:"€";position:absolute;right:-35px;bottom:-120px;font:700 420px/1 var(--jet-font);
+  color:var(--jet-lime);transform:rotate(-12deg);z-index:0}
+.egg-modal::after{content:"";position:absolute;inset:0;z-index:0;opacity:.75;pointer-events:none;
+  background:radial-gradient(circle at 12% 18%,var(--jet-lime) 0 7px,transparent 8px),
+    radial-gradient(circle at 84% 18%,var(--_ref---color--brown--400) 0 5px,transparent 6px),
+    radial-gradient(circle at 18% 82%,var(--_ref---color--green--500) 0 6px,transparent 7px),
+    radial-gradient(circle at 68% 72%,var(--jet-lime) 0 4px,transparent 5px)}
+.egg-modal p{position:relative;z-index:1;max-width:15ch;margin:0;padding:74px 58px 150px;
+  font:700 clamp(36px,6vw,62px)/1.02 var(--jet-font);letter-spacing:-2px;text-wrap:balance}
+.calc-footer{padding:34px 16px 48px;text-align:center;color:var(--jet-text-muted);font-size:13px;
+  border-top:1px solid var(--jet-border);background:var(--jet-surface-ivory)}
+@media(max-width:600px){.egg-modal{min-height:420px}.egg-modal p{padding:54px 28px 170px;
+  font-size:42px}.egg-modal::before{font-size:330px;right:-50px;bottom:-95px}}
 
 /* modulo */
 .form-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:24px;align-items:start}
@@ -1292,7 +1305,6 @@ const FAQ=[
   ['Perché il netto mensile non coincide con la mia busta paga?','Il calcolo è annuale e di competenza. Le addizionali vengono trattenute a rate nell\'anno successivo al conguaglio, la tredicesima non beneficia delle stesse detrazioni mensili e il conguaglio di fine anno riequilibra tutto. Per questo il numero è etichettato <b>media</b>, mai «importo del cedolino».'],
   ['Perché scegliere 12 o 13 mensilità non cambia il netto annuo?','Perché non è un dato di calcolo: è solo il divisore con cui si presenta lo stesso netto annuo. Le trattenute non cambiano. Puoi verificarlo qui sopra — cambiando il selettore il netto annuo resta identico e si muove solo la media. Se cambiasse, sarebbe un errore.'],
   ['Perché a volte un euro lordo in più fa <em>scendere</em> il netto?','Perché alcune misure sono esenzioni con soglia secca, non franchigie: superata la soglia si perdono per intero. Il caso più forte è l\'esenzione dell\'addizionale comunale di Milano: a 25.327,62 € di RAL un centesimo lordo in più costa circa 184 € netti l\'anno. È corretto, non è un errore di arrotondamento — ed è il motivo per cui queste soglie vanno mostrate invece che nascoste.'],
-  ['Cosa vuol dire «ogni euro torna»?','Che la somma delle voci del dettaglio è <em>per costruzione</em> il netto annuo: il totale non è calcolato a parte e poi confrontato, è la somma stessa. La verifica gira a ogni ricalcolo, non solo nei test, quindi la pagina non può mostrare una tabella che non chiude.'],
   ['Quali sono i contributi a carico del dipendente?','Il contributo IVS del 9,19% sull\'imponibile previdenziale, più un contributo aggiuntivo dell\'1% sulla quota che supera la prima fascia pensionabile (56.224 € nel 2026). Sopra il massimale di 122.295 € entrambi si fermano: è il motivo per cui l\'aliquota contributiva effettiva scende oltre quella soglia.'],
   ['Cosa non è incluso nel calcolo?','TFR, costo azienda e contributi del datore, INAIL, CCNL e fondi di solidarietà, fondi sanitari e previdenza complementare, familiari a carico, altri redditi, oneri deducibili e detraibili, benefit, premi e agevolazioni personali. Nessuno di questi è ricavabile dalla sola RAL: chiederli significherebbe un modulo lungo prima del primo risultato.'],
   ['Da dove vengono le regole?','Solo da fonti primarie: leggi di bilancio 2025 e 2026, TUIR, circolari INPS, siti ufficiali di Regione Lombardia e Comune di Milano. Ogni voce del dettaglio rimanda al proprio riferimento, e l\'elenco completo è nella sezione Metodo.'],
@@ -1489,18 +1501,12 @@ function chain(res,st){
     :`<div class="empty"><b>Nessuna voce selezionata.</b><br>
        Clicca una riga della catena — quelle con il segno <span class="jet-info-dot" aria-hidden="true">i</span> —
        per vederne formula, base di calcolo e fonte normativa.</div>`;
-  const parts=[fmt(res.input.ral),'− '+fmt(res.kpi.totaleContributi),'− '+fmt(res.kpi.totaleImposte)]
-    .concat(res.integrazioni>0?['+ '+fmt(res.integrazioni)]:[]);
   return `<div class="detsplit">
     <div>
       <p class="chainhint"><span class="jet-info-dot" aria-hidden="true">i</span>
         Le righe con questo segno si aprono: <b>clicca una voce</b> per vederne formula, base e fonte.</p>
       <div class="chainwrap"><table class="chain"><caption class="sr">Dalla RAL al netto annuo</caption>
       <tbody>${rows.join('')}</tbody></table></div>
-      <div class="jet-alert jet-alert--success" style="margin-top:18px">
-        <div class="jet-alert-body"><div class="jet-alert-text recon">
-          <b>Ogni euro torna.</b><span class="mono">${parts.join(' ')} = ${fmt(res.kpi.nettoAnnuo)} €</span>
-        </div></div></div>
     </div>
     <aside class="pane" id="voce-pane">${pane}</aside>
   </div>`;
@@ -1614,6 +1620,7 @@ function pagina(res,st){
         ${s.lede?`<p class="lede">${s.lede}</p>`:''}
         <div class="sec-body">${s.body}</div>
       </div></section>`).join('')}
+    <footer class="calc-footer">Prototipo di Riccardo Sartori per il task AI Builder @ Jet HR.</footer>
     <dialog class="egg-modal" id="egg"><p>Se hai 3.000.000 di RAL l'ultimo problema è lo stipendio netto</p></dialog>`;
 }
 function vuoto(st){
@@ -1629,6 +1636,7 @@ function vuoto(st){
       <h2 style="margin-top:10px">Le domande che arrivano sempre</h2>
       <div class="sec-body">${faq()}</div>
     </section>
+    <footer class="calc-footer" style="margin-top:40px">Prototipo di Riccardo Sartori per il task AI Builder @ Jet HR.</footer>
   </div>`;
 }
 

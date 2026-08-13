@@ -12,7 +12,6 @@ a{color:inherit;text-underline-offset:3px}.wrap{width:min(920px,calc(100% - 32px
 .top .wrap{display:flex;justify-content:space-between;align-items:center;gap:20px}.back{font-weight:650;text-decoration:none}.nav{display:flex;gap:18px;font-size:14px}.nav a{text-decoration:none;color:var(--muted)}
 header{padding:82px 0 64px}header .eyebrow,.section-eye{font-size:12px;font-weight:750;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}header .eyebrow:before,.section-eye:before{content:"";display:inline-block;width:22px;height:2px;background:var(--lime);vertical-align:middle;margin-right:9px}
 h1{font-size:clamp(42px,7vw,72px);line-height:1.02;letter-spacing:-.045em;margin:16px 0 20px;max-width:13ch}header p{font-size:20px;max-width:66ch;color:var(--muted);margin:0}
-.thesis{background:var(--ink);color:#fff;border-radius:20px;padding:34px;margin-top:36px;font-size:clamp(22px,3vw,30px);line-height:1.25;letter-spacing:-.02em}.thesis mark{background:var(--lime);color:var(--ink);padding:0 .12em}
 section{padding:64px 0;border-top:1px solid var(--line);scroll-margin-top:70px}h2{font-size:clamp(30px,4vw,44px);line-height:1.08;letter-spacing:-.035em;margin:12px 0 16px}h3{font-size:20px;margin:0 0 8px}.lede{font-size:18px;color:var(--muted);max-width:68ch;margin:0 0 30px}
 .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.card{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px}.card p{margin:0;color:var(--muted)}
 .flow{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:16px;overflow:hidden}.step{background:#fff;padding:20px 16px;min-height:145px}.step b{display:block;font-size:30px;margin-bottom:18px}.step span{font-size:14px;color:var(--muted)}
@@ -25,7 +24,7 @@ section{padding:64px 0;border-top:1px solid var(--line);scroll-margin-top:70px}h
 <body>
 <nav class="top" aria-label="Navigazione"><div class="wrap"><a class="back" href="index.html">← Torna al calcolatore</a><div class="nav"><a href="#perimetro">Perimetro</a><a href="#calcolo">Calcolo</a><a href="#verifica">Verifica</a><a href="#limiti">Limiti</a></div></div></nav>
 <main>
-<header class="wrap"><div class="eyebrow">Nota di lavoro</div><h1>Prima le regole, poi la pagina</h1><p>Questo prototipo non prova a coprire ogni busta paga. Prende un caso standard, rende esplicite le assunzioni e lascia ispezionare ogni passaggio dalla RAL al netto.</p><div class="thesis">Ho ridotto lo scope del prodotto, <mark>non il controllo sulle logiche.</mark></div></header>
+<header class="wrap"><div class="eyebrow">Nota di lavoro</div><h1>Prima le regole, poi la pagina</h1><p>Questo prototipo non prova a coprire ogni busta paga. Prende un caso standard, rende esplicite le assunzioni e lascia ispezionare ogni passaggio dalla RAL al netto.</p></header>
 
 <section id="perimetro"><div class="wrap"><div class="section-eye">01 — Perimetro</div><h2>Un caso solo, spiegato per intero</h2><p class="lede">Con la sola RAL non esiste un netto universalmente corretto. Ho quindi fissato ciò che normalmente richiederebbe altri input.</p><div class="grid">
 <article class="card"><h3>Incluso</h3><p>Regole 2026, Milano, impiegato privato a tempo indeterminato, rapporto per 365 giorni, un solo datore e un solo reddito.</p></article>
