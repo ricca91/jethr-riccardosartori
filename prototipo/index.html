@@ -1620,8 +1620,9 @@ function pagina(res,st){
         <div class="sec-body">${s.body}</div>
       </div></section>`).join('')}
     <footer class="calc-footer">Prototipo di Riccardo Sartori per il task AI Builder @ Jet HR.</footer>
-    <dialog class="egg-modal" id="egg"><p>Se hai ${eur(res.input.ral)} di RAL l'ultimo problema è lo stipendio netto</p></dialog>`;
+    ${eggDialog()}`;
 }
+const eggDialog=()=>`<dialog class="egg-modal" id="egg"><p>Questa non è più una RAL. È un pre-seed.</p></dialog>`;
 function vuoto(st){
   return `<div class="pg">${hero()}${form(st)}
     <section class="sec" style="margin-top:40px">
@@ -1636,7 +1637,7 @@ function vuoto(st){
       <div class="sec-body">${faq()}</div>
     </section>
     <footer class="calc-footer" style="margin-top:40px">Prototipo di Riccardo Sartori per il task AI Builder @ Jet HR.</footer>
-  </div>`;
+  </div>${eggDialog()}`;
 }
 
 /* ============================================================
@@ -1663,8 +1664,9 @@ function commit(silenzioso){
   if(v===null){st.errore='Inserisci la RAL per calcolare.';st.res=null;}
   else if(Number.isNaN(v)){st.errore='Solo cifre: usa la virgola per i decimali, per esempio 35.000,50.';st.res=null;}
   else if(Number(v)<0){st.errore='La RAL non può essere negativa.';st.res=null;}
-  else if(Number(v)>9999999){st.errore='Oltre 9.999.999 € il calcolo esce dal perimetro dichiarato.';st.res=null;}
-  else{st.res=calcola(v,st.mensilita);st.dirty=false;st.eggPending=Number(v)>=4700000;
+  else if(Number(v)===4700000){st.res=null;st.dirty=false;st.eggPending=true;}
+  else if(Number(v)>1000000){st.errore='Il calcolo è disponibile fino a una RAL di 1.000.000 €.';st.res=null;}
+  else{st.res=calcola(v,st.mensilita);st.dirty=false;st.eggPending=false;
     if(!st.aperta)st.aperta='ivs';}   // mostra subito a cosa serve il pannello
   if(!silenzioso)render();
 }
