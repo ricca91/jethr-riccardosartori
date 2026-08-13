@@ -1,6 +1,6 @@
 /* ============================================================
    MATRICE DI PROVA — motore RAL → netto, regole-2026-v1
-   node --test docs/prototype/
+   node --test prototipo/motore.test.js
 
    Tre categorie, etichettate perché provano cose diverse:
 

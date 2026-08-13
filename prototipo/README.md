@@ -15,7 +15,7 @@ prima del primo risultato.
 | `index.html` | la pagina, autoportante |
 | `motore.js` | il calcolo, separato per poterlo provare fuori dal browser |
 | `motore.test.js` | la matrice di prova |
-| `../verifica.md` | che cosa è provato, come, e che cosa non lo è |
+| `../processo/verifica.md` | che cosa è provato, come, e che cosa non lo è |
 
 ## Come si apre
 
@@ -31,13 +31,13 @@ Lo stato sta nell'URL (`?ral=&m=&calc=1`), quindi ogni schermata è condivisibil
 ## Come si provano i numeri
 
 ```
-node --test docs/prototype/motore.test.js
+node --test prototipo/motore.test.js
 ```
 
 Node 18 o successivo, zero dipendenze. Lo stesso file `motore.js` che gira nella pagina
 gira in Node: nessuna logica duplicata fra pagina e prove.
 
-Dettagli in [`docs/verifica.md`](../verifica.md).
+Dettagli in [`processo/verifica.md`](../processo/verifica.md).
 
 ## Le tre scelte che spiegano la pagina
 
@@ -77,5 +77,5 @@ di quello che afferma.
 La demo è un deploy statico della sola cartella, senza passo di build:
 
 ```
-vercel deploy --prod docs/prototype
+vercel deploy --prod prototipo
 ```
