@@ -2,7 +2,7 @@
 
 Strategic thinker. Creative builder. Relentlessly curious.
 
-- **Email:** riccardosartori@outlook.com
+- **Email:** riccsartori@gmail.com
 - **LinkedIn:** [linkedin.com/in/riccsartori](https://www.linkedin.com/in/riccsartori/)
 
 ## Esperienze
