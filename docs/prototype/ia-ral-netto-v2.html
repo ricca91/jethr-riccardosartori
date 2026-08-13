@@ -1111,6 +1111,8 @@ body.jet-base{background:var(--jet-surface-ivory);margin:0;padding-bottom:104px}
 .protobar button:hover{background:#2f3625}
 .protobar button[aria-pressed="true"]{background:var(--jet-lime);color:var(--jet-lime-ink);border-color:var(--jet-lime)}
 .protobar .vlabel{padding:0 8px;font-weight:600;white-space:nowrap}
+.protobar .vtag{padding:0 6px;font-size:11px;font-weight:700;letter-spacing:.6px;
+  text-transform:uppercase;color:#9aa394;white-space:nowrap}
 .protobar .sep{width:1px;height:20px;background:#343a2c;margin:0 2px}
 .protobar select{background:#23281c;color:#fff;border:1px solid #343a2c;border-radius:999px;padding:4px 6px;font:inherit}
 .protonote{width:92%;max-width:1180px;margin:0 auto;padding:14px 0 0;font-size:13px;color:var(--jet-text-muted)}
@@ -1131,7 +1133,7 @@ body.jet-base{background:var(--jet-surface-ivory);margin:0;padding-bottom:104px}
 
 /* sezioni impilate */
 .sec{scroll-margin-top:96px}
-.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+.sec-head{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:6px}
 .sec-eyebrow{font-size:12px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;
   color:var(--jet-text-muted);display:flex;align-items:center;gap:8px}
 .sec-eyebrow::before{content:"";width:22px;height:2px;background:var(--jet-lime);border-radius:2px}
@@ -1727,6 +1729,10 @@ function faq(){
 function sezioni(res,st){
   return [
     {id:'risultato',eye:'Livello 1 — la risposta',t:'Quanto ti resta',
+     tool:`<label class="jet-switch" title="Aggiunge spiegazioni discorsive accanto ai numeri">
+        <input type="checkbox" data-spiega ${st.spiega?'checked':''}>
+        <span class="jet-switch-track"></span>
+        <span class="jet-label--plain" style="font-weight:600">Spiegami il calcolo</span></label>`,
      lede:'Il netto annuo maturato sulla RAL inserita, e la sua media per mensilità.',
      body:`${answerBlock(res)}<div style="margin-top:22px">${kpis(res)}</div>
        ${noticeSoglie(res,st)}${eegg(res)}${spiegaCallout(res,st)}`},
@@ -1762,8 +1768,8 @@ function variantA(res,st){
         </aside>
         <div class="stack" style="gap:20px">
           ${secs.map(s=>`<section class="sec jet-card" id="${s.id}" style="padding:28px">
-            <div class="sec-head"><div><div class="sec-eyebrow">${s.eye}</div>
-              <h2 style="margin-top:8px">${s.t}</h2></div></div>
+            <div class="sec-eyebrow">${s.eye}</div>
+            <div class="sec-head"><h2 style="margin-top:8px">${s.t}</h2>${s.tool||''}</div>
             ${s.lede?`<p class="lede">${s.lede}</p>`:''}
             <div class="sec-body">${s.body}</div>
           </section>`).join('')}
@@ -1785,7 +1791,7 @@ function variantB(res,st){
       border-bottom:1px solid var(--jet-border)">
       <div class="pg">
         <div class="sec-eyebrow">${s.eye}</div>
-        <h2 style="margin-top:10px">${s.t}</h2>
+        <div class="sec-head"><h2 style="margin-top:10px">${s.t}</h2>${s.tool||''}</div>
         ${s.lede?`<p class="lede">${s.lede}</p>`:''}
         <div class="sec-body">${s.body}</div>
       </div></section>`).join('')}`;
@@ -1804,7 +1810,7 @@ function variantC(res,st){
     <div class="pg" style="margin-top:8px">
       ${secs.map((s,i)=>`<section class="sec" id="${s.id}" style="padding:44px 0${i?';border-top:1px solid var(--jet-border)':''}">
         <div class="sec-eyebrow">${s.eye}</div>
-        <h2 style="margin-top:10px">${s.t}</h2>
+        <div class="sec-head"><h2 style="margin-top:10px">${s.t}</h2>${s.tool||''}</div>
         ${s.lede?`<p class="lede">${s.lede}</p>`:''}
         <div class="sec-body">${s.body}</div>
       </section>`).join('')}
@@ -1926,11 +1932,11 @@ function render(keepScroll){
   if(keepScroll)window.scrollTo(0,y);
 }
 function protobar(){
-  return `<button data-nav="-1" aria-label="Variante precedente">←</button>
+  return `<span class="vtag">consolle prototipo</span>
+    <span class="sep"></span>
+    <button data-nav="-1" aria-label="Variante precedente">←</button>
     <span class="vlabel">${st.variant} — ${VARIANTI[st.variant].nome}</span>
     <button data-nav="1" aria-label="Variante successiva">→</button>
-    <span class="sep"></span>
-    <button data-spiega aria-pressed="${st.spiega}">Spiegami il calcolo</button>
     <span class="sep"></span>
     <label style="display:flex;align-items:center;gap:5px">soglie entro
       <select data-finestra>${[0,100,500,1500,4000].map(w=>
@@ -1954,6 +1960,7 @@ function cycle(d){const k=Object.keys(VARIANTI);
   st.variant=k[(k.indexOf(st.variant)+d+k.length)%k.length];st.aperta=null;render();}
 document.addEventListener('change',e=>{
   if(e.target.matches('[data-finestra]')){st.finestra=Number(e.target.value);render(true);}
+  if(e.target.matches('[data-spiega]')){st.spiega=e.target.checked;render(true);}
 });
 document.addEventListener('click',e=>{
   const a=e.target.closest('[data-anchor]');
@@ -1961,12 +1968,11 @@ document.addEventListener('click',e=>{
     document.getElementById(a.dataset.anchor)?.scrollIntoView({
       behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});
     return;}
-  const t=e.target.closest('#go,#reset,[data-nav],[data-spiega],[data-giu],[data-m],[data-voce],[data-band]');
+  const t=e.target.closest('#go,#reset,[data-nav],[data-giu],[data-m],[data-voce],[data-band]');
   if(!t)return;
   if(t.id==='go')return commit();
   if(t.id==='reset'){st.res=null;st.ralRaw='';st.aperta=null;st.errore=null;return render();}
   if(t.hasAttribute('data-nav'))return cycle(Number(t.dataset.nav));
-  if(t.hasAttribute('data-spiega')){st.spiega=!st.spiega;return render(true);}
   if(t.hasAttribute('data-giu')){st.sogliaSotto=!st.sogliaSotto;return render(true);}
   if(t.hasAttribute('data-m')){
     st.mensilita=Number(t.dataset.m);
