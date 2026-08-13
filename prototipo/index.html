@@ -1108,6 +1108,28 @@ body.jet-base{background:var(--jet-surface-ivory);margin:0;padding-bottom:104px}
   line-height:110%;letter-spacing:-1.2px;text-wrap:balance}
 .hero p{margin:0 auto;max-width:62ch;color:var(--jet-text-regular);font-size:17px}
 .hero .meta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.worklink{display:inline-flex;margin-top:18px;color:var(--jet-text);font-size:14px;font-weight:600;
+  text-underline-offset:4px;text-decoration-color:var(--jet-border-strong)}
+.worklink:hover{text-decoration-color:var(--jet-lime);text-decoration-thickness:2px}
+.limit-note{margin-top:18px;background:var(--jet-warning-bg);border:1px solid var(--jet-warning-border);
+  border-radius:12px;padding:16px 18px;color:var(--jet-warning-ink);font-size:14px;line-height:1.5}
+.egg-modal{border:1px solid var(--jet-black);border-radius:28px;padding:0;max-width:760px;
+  width:calc(100% - 32px);min-height:390px;overflow:hidden;background:var(--jet-surface-ivory);
+  color:var(--jet-black);box-shadow:0 30px 90px #11150a66}
+.egg-modal::backdrop{background:#11150ab8;backdrop-filter:blur(5px)}
+.egg-modal::before{content:"€";position:absolute;right:-35px;bottom:-120px;font:700 420px/1 var(--jet-font);
+  color:var(--jet-lime);transform:rotate(-12deg);z-index:0}
+.egg-modal::after{content:"";position:absolute;inset:0;z-index:0;opacity:.75;pointer-events:none;
+  background:radial-gradient(circle at 12% 18%,var(--jet-lime) 0 7px,transparent 8px),
+    radial-gradient(circle at 84% 18%,var(--_ref---color--brown--400) 0 5px,transparent 6px),
+    radial-gradient(circle at 18% 82%,var(--_ref---color--green--500) 0 6px,transparent 7px),
+    radial-gradient(circle at 68% 72%,var(--jet-lime) 0 4px,transparent 5px)}
+.egg-modal p{position:relative;z-index:1;max-width:15ch;margin:0;padding:74px 58px 150px;
+  font:700 clamp(36px,6vw,62px)/1.02 var(--jet-font);letter-spacing:-2px;text-wrap:balance}
+.calc-footer{padding:34px 16px 48px;text-align:center;color:var(--jet-text-muted);font-size:13px;
+  border-top:1px solid var(--jet-border);background:var(--jet-surface-ivory)}
+@media(max-width:600px){.egg-modal{min-height:420px}.egg-modal p{padding:54px 28px 170px;
+  font-size:42px}.egg-modal::before{font-size:330px;right:-50px;bottom:-95px}}
 
 /* modulo */
 .form-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:24px;align-items:start}
@@ -1179,7 +1201,7 @@ body.jet-base{background:var(--jet-surface-ivory);margin:0;padding-bottom:104px}
 .flowsvg text{fill:var(--jet-text-muted);font-size:inherit}
 .flowsvg text.n{font-weight:700;fill:var(--jet-text);font-variant-numeric:tabular-nums}
 .flowsvg .band{cursor:pointer}
-.flowsvg .band:hover rect,.flowsvg .band:focus rect{filter:brightness(1.08)}
+.flowsvg .band:hover,.flowsvg .band:focus{filter:brightness(1.08)}
 .legend{display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:var(--jet-text-regular)}
 .legend i{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:7px;vertical-align:-1px}
 .stackbar{display:flex;width:100%;height:40px;border-radius:8px;overflow:hidden}
@@ -1283,7 +1305,6 @@ const FAQ=[
   ['Perché il netto mensile non coincide con la mia busta paga?','Il calcolo è annuale e di competenza. Le addizionali vengono trattenute a rate nell\'anno successivo al conguaglio, la tredicesima non beneficia delle stesse detrazioni mensili e il conguaglio di fine anno riequilibra tutto. Per questo il numero è etichettato <b>media</b>, mai «importo del cedolino».'],
   ['Perché scegliere 12 o 13 mensilità non cambia il netto annuo?','Perché non è un dato di calcolo: è solo il divisore con cui si presenta lo stesso netto annuo. Le trattenute non cambiano. Puoi verificarlo qui sopra — cambiando il selettore il netto annuo resta identico e si muove solo la media. Se cambiasse, sarebbe un errore.'],
   ['Perché a volte un euro lordo in più fa <em>scendere</em> il netto?','Perché alcune misure sono esenzioni con soglia secca, non franchigie: superata la soglia si perdono per intero. Il caso più forte è l\'esenzione dell\'addizionale comunale di Milano: a 25.327,62 € di RAL un centesimo lordo in più costa circa 184 € netti l\'anno. È corretto, non è un errore di arrotondamento — ed è il motivo per cui queste soglie vanno mostrate invece che nascoste.'],
-  ['Cosa vuol dire «ogni euro torna»?','Che la somma delle voci del dettaglio è <em>per costruzione</em> il netto annuo: il totale non è calcolato a parte e poi confrontato, è la somma stessa. La verifica gira a ogni ricalcolo, non solo nei test, quindi la pagina non può mostrare una tabella che non chiude.'],
   ['Quali sono i contributi a carico del dipendente?','Il contributo IVS del 9,19% sull\'imponibile previdenziale, più un contributo aggiuntivo dell\'1% sulla quota che supera la prima fascia pensionabile (56.224 € nel 2026). Sopra il massimale di 122.295 € entrambi si fermano: è il motivo per cui l\'aliquota contributiva effettiva scende oltre quella soglia.'],
   ['Cosa non è incluso nel calcolo?','TFR, costo azienda e contributi del datore, INAIL, CCNL e fondi di solidarietà, fondi sanitari e previdenza complementare, familiari a carico, altri redditi, oneri deducibili e detraibili, benefit, premi e agevolazioni personali. Nessuno di questi è ricavabile dalla sola RAL: chiederli significherebbe un modulo lungo prima del primo risultato.'],
   ['Da dove vengono le regole?','Solo da fonti primarie: leggi di bilancio 2025 e 2026, TUIR, circolari INPS, siti ufficiali di Regione Lombardia e Comune di Milano. Ogni voce del dettaglio rimanda al proprio riferimento, e l\'elenco completo è nella sezione Metodo.'],
@@ -1313,6 +1334,7 @@ function hero(){
       <span class="jet-badge jet-badge--neutral">Settore privato</span>
       <span class="jet-badge jet-badge--neutral">Tempo indeterminato</span>
     </div>
+    <a class="worklink" href="come-ho-lavorato.html">Come ho costruito e verificato il calcolo →</a>
   </div>`;
 }
 function form(st){
@@ -1417,11 +1439,10 @@ function sankey(res,h,fs){
     ${band('contributi',rib(x1+NW,yRal,yRal+hCo,x2,yCo,yCo+hCo,C.contrib)+node(x2,yCo,hCo,C.contrib),`Contributi ${eur(co)}`)}
     ${rib(x1+NW,yRal+hCo,yRal+hRal,x2,yIm,yIm+hIm,'var(--_ref---color--gray-scale--200)')}
     ${band('imposte',rib(x2+NW,yIm,yIm+hTx,x3,yTx,yTx+hTx,C.tax)+node(x3,yTx,hTx,C.tax),`Imposte ${eur(tx)}`)}
-    ${rib(x2+NW,yIm+hTx,yIm+hIm,x3,yNe,yNe+(hIm-hTx),C.netto)}
+    ${band('netto',rib(x2+NW,yIm+hTx,yIm+hIm,x3,yNe,yNe+(hIm-hTx),C.netto)+node(x3,yNe,hNe,C.netto),`Netto ${eur(ne)}`)}
     ${ig>0?band('integrazioni',rib(x1+NW,yIg,yIg+hIg,x3,yNe+(hIm-hTx),yNe+hNe,C.integr)+node(x1,yIg,hIg,C.integr),`Integrazioni ${eur(ig)}`):''}
     ${node(x1,yRal,hRal,'var(--jet-black)')}
     ${node(x2,yIm,hIm,'var(--_ref---color--gray-scale--300)')}
-    ${band('netto',node(x3,yNe,hNe,C.netto),`Netto ${eur(ne)}`)}
     ${lab(x1,yRal,'RAL',ral,'start')}
     ${ig>0?lab(x1,yIg,'Integrazioni di legge',ig,'start'):''}
     ${lab(x2,yCo,'Contributi',co,'start')}
@@ -1479,31 +1500,23 @@ function chain(res,st){
     :`<div class="empty"><b>Nessuna voce selezionata.</b><br>
        Clicca una riga della catena — quelle con il segno <span class="jet-info-dot" aria-hidden="true">i</span> —
        per vederne formula, base di calcolo e fonte normativa.</div>`;
-  const parts=[fmt(res.input.ral),'− '+fmt(res.kpi.totaleContributi),'− '+fmt(res.kpi.totaleImposte)]
-    .concat(res.integrazioni>0?['+ '+fmt(res.integrazioni)]:[]);
   return `<div class="detsplit">
     <div>
       <p class="chainhint"><span class="jet-info-dot" aria-hidden="true">i</span>
         Le righe con questo segno si aprono: <b>clicca una voce</b> per vederne formula, base e fonte.</p>
       <div class="chainwrap"><table class="chain"><caption class="sr">Dalla RAL al netto annuo</caption>
       <tbody>${rows.join('')}</tbody></table></div>
-      <div class="jet-alert jet-alert--success" style="margin-top:18px">
-        <div class="jet-alert-body"><div class="jet-alert-text recon">
-          <b>Ogni euro torna.</b><span class="mono">${parts.join(' ')} = ${fmt(res.kpi.nettoAnnuo)} €</span>
-        </div></div></div>
     </div>
     <aside class="pane" id="voce-pane">${pane}</aside>
   </div>`;
 }
 
-function eegg(res){
-  if(res.input.ral<=1000000)return '';
-  return `<div class="jet-alert jet-alert--lime" style="margin-top:16px"><div class="jet-alert-body">
-    <div class="jet-alert-title">Con una RAL a sette cifre, il netto mensile forse non è il tuo problema principale</div>
-    <div class="jet-alert-text">Il conto però resta corretto, e dice una cosa vera: sopra il massimale di
-    122.295 € i contributi si fermano, quindi stai versando il
-    <b>${res.aliquotaContributivaEffettiva.toFixed(2).replace('.',',')}%</b> di contributi.
-    Chi guadagna 30.000 € ne versa il 9,19%.</div></div></div>`;
+function avvisoMassimale(res){
+  if(res.input.ral<=122295)return '';
+  return `<div class="limit-note"><b>Oltre 122.295 € la sola RAL non basta.</b>
+    Il risultato applica il massimale contributivo assumendo che il dipendente non avesse
+    anzianità contributiva al 31 dicembre 1995. Se questa condizione non vale, il risultato
+    non è applicabile.</div>`;
 }
 function metodo(){
   return `<div class="stack" style="gap:26px">
@@ -1569,7 +1582,7 @@ function sezioni(res,st){
     {id:'risultato',eye:'Livello 1 — la risposta',t:'Quanto ti resta',
      lede:'Il netto annuo maturato sulla RAL inserita, e la sua media per mensilità.',
      body:`${answerBlock(res)}<div style="margin-top:22px">${kpis(res)}</div>
-       ${eegg(res)}`},
+       ${avvisoMassimale(res)}`},
     {id:'flusso',eye:'Livello 2 — il flusso',t:'Dove va il resto',
      lede:'Le fasce sono in scala: la larghezza di ogni flusso è proporzionale al suo importo. Si parte dalla RAL, non dal costo azienda: questo strumento risponde a «dove vanno i soldi trattenuti sul mio lordo», non a quanto costi all\'azienda. Clicca una fascia per aprirne le voci.',
      body:`${sankey(res,260,13)}<div class="legend" style="margin-top:14px">${legendItems(res)}</div>`},
@@ -1605,8 +1618,11 @@ function pagina(res,st){
         <div class="sec-head"><h2 style="margin-top:10px">${s.t}</h2>${s.tool||''}</div>
         ${s.lede?`<p class="lede">${s.lede}</p>`:''}
         <div class="sec-body">${s.body}</div>
-      </div></section>`).join('')}`;
+      </div></section>`).join('')}
+    <footer class="calc-footer">Prototipo di Riccardo Sartori per il task AI Builder @ Jet HR.</footer>
+    ${eggDialog()}`;
 }
+const eggDialog=()=>`<dialog class="egg-modal" id="egg"><p>Questa non è più una RAL.<br>È un pre-seed!</p></dialog>`;
 function vuoto(st){
   return `<div class="pg">${hero()}${form(st)}
     <section class="sec" style="margin-top:40px">
@@ -1620,14 +1636,15 @@ function vuoto(st){
       <h2 style="margin-top:10px">Le domande che arrivano sempre</h2>
       <div class="sec-body">${faq()}</div>
     </section>
-  </div>`;
+    <footer class="calc-footer" style="margin-top:40px">Prototipo di Riccardo Sartori per il task AI Builder @ Jet HR.</footer>
+  </div>${eggDialog()}`;
 }
 
 /* ============================================================
    STATO E EVENTI
    ============================================================ */
 const st={ralRaw:'35.000',mensilita:13,
-  aperta:null,attiva:'risultato',res:null,errore:null,dirty:false};
+  aperta:null,attiva:'risultato',res:null,errore:null,dirty:false,eggPending:false};
 
 function fromURL(){
   const p=new URLSearchParams(location.search);
@@ -1647,8 +1664,9 @@ function commit(silenzioso){
   if(v===null){st.errore='Inserisci la RAL per calcolare.';st.res=null;}
   else if(Number.isNaN(v)){st.errore='Solo cifre: usa la virgola per i decimali, per esempio 35.000,50.';st.res=null;}
   else if(Number(v)<0){st.errore='La RAL non può essere negativa.';st.res=null;}
-  else if(Number(v)>9999999){st.errore='Oltre 9.999.999 € il calcolo esce dal perimetro dichiarato.';st.res=null;}
-  else{st.res=calcola(v,st.mensilita);st.dirty=false;
+  else if(Number(v)===4700000){st.res=null;st.dirty=false;st.eggPending=true;}
+  else if(Number(v)>1000000){st.errore='Il calcolo è disponibile fino a una RAL di 1.000.000 €.';st.res=null;}
+  else{st.res=calcola(v,st.mensilita);st.dirty=false;st.eggPending=false;
     if(!st.aperta)st.aperta='ivs';}   // mostra subito a cosa serve il pannello
   if(!silenzioso)render();
 }
@@ -1695,6 +1713,8 @@ function render(keepScroll){
   toURL();scrollspy();
   if(keepScroll)window.scrollTo(0,y);
   rendiFuoco(fuoco);
+  const egg=document.getElementById('egg');
+  if(egg&&st.eggPending){egg.showModal();st.eggPending=false;}
 }
 document.addEventListener('input',e=>{
   if(e.target.id!=='ral')return;
@@ -1705,6 +1725,7 @@ document.addEventListener('keydown',e=>{
   if(e.target.id==='ral'&&e.key==='Enter'){e.preventDefault();commit();}
 });
 document.addEventListener('click',e=>{
+  if(e.target.id==='egg'){e.target.close();return;}
   const a=e.target.closest('[data-anchor]');
   if(a){e.preventDefault();
     document.getElementById(a.dataset.anchor)?.scrollIntoView({
@@ -1723,8 +1744,12 @@ document.addEventListener('click',e=>{
   if(t.hasAttribute('data-voce')){
     st.aperta=st.aperta===t.dataset.voce?null:t.dataset.voce;return render(true);}
   if(t.hasAttribute('data-band')){
-    const map={contributi:'ivs',imposte:'lorda',netto:null,integrazioni:'somma'};
-    st.aperta=map[t.dataset.band];render(true);
+    // Il netto non e' una voce della catena: e' il totale. La sua fascia porta al
+    // dettaglio senza svuotare il pannello, cosi' il clic non sembra fallito.
+    const map={contributi:'ivs',imposte:'lorda',integrazioni:'somma'};
+    const voce=map[t.dataset.band];
+    if(voce)st.aperta=voce;
+    render(true);
     document.getElementById('dettaglio')?.scrollIntoView({
       behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});
     if(st.aperta)rendiFuoco(`tr[data-voce="${st.aperta}"] .lbl`);
