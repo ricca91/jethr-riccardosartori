@@ -16,8 +16,7 @@ Il prototipo copre deliberatamente **un caso solo**: regole 2026, Milano, impieg
 privato a tempo indeterminato, anno intero, nessun familiare a carico né agevolazione personale.
 Non simula un cedolino: stima il carico annuale maturato sulla RAL.
 
-**C'è anche un easter egg.** La soglia che lo attiva non è casuale: racconta un pezzo della
-storia di Jet HR, a partire dal suo round pre-seed da 4,7 milioni di euro.
+**C'è anche un easter egg.** Tutto inizia da un pezzo di storia di Jet HR. Trovato?
 
 ## Perché il calcolo è sotto controllo
 
