@@ -1255,11 +1255,19 @@ body.jet-base{background:var(--jet-surface-ivory);margin:0;padding-bottom:104px}
 .chain .op{width:22px;text-align:center;font-family:var(--jet-font-mono);font-size:12px;
   font-weight:700;color:var(--jet-text-disabled)}
 .chain .amt{text-align:right;white-space:nowrap;font-weight:600;font-size:15.5px}
-.chain button{background:none;border:0;padding:0;font:inherit;text-align:left;cursor:pointer;
-  color:var(--jet-text-regular);font-weight:500;border-bottom:1px dashed var(--jet-border-strong)}
-.chain button:hover{color:var(--jet-text);border-bottom-color:var(--jet-text)}
-.chain tr.on button{color:var(--jet-text);font-weight:600;border-bottom-color:var(--jet-lime)}
+.chain button.lbl{background:none;border:0;padding:0;font:inherit;text-align:left;cursor:pointer;
+  color:var(--jet-text-regular);font-weight:500;display:inline-flex;align-items:center;gap:7px}
+.chain tr.cl{cursor:pointer}
+.chain tr.cl:hover td{background:var(--jet-surface-muted)}
+.chain tr.cl:hover .jet-info-dot{background:var(--jet-black);color:#fff;border-color:var(--jet-black)}
+.chain tr.cl .jet-info-dot{cursor:pointer;transition:all var(--jet-transition) var(--jet-ease)}
+.chain button.lbl:focus-visible{outline:2px solid var(--jet-black);outline-offset:3px;border-radius:4px}
 .chain tr.on td{background:var(--jet-lime-pale)}
+.chain tr.on button.lbl{color:var(--jet-text);font-weight:700}
+.chain tr.on .jet-info-dot{background:var(--jet-lime);border-color:var(--jet-lime-ink);color:var(--jet-lime-ink)}
+.chainhint{display:flex;align-items:center;gap:8px;margin:0 0 14px;font-size:13.5px;
+  color:var(--jet-text-muted)}
+.chainhint b{color:var(--jet-text)}
 .chain tr.grp td{padding-top:22px;border-bottom:0}
 .chain tr.grp .g{font-size:11.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;
   color:var(--jet-text-muted)}
@@ -1274,6 +1282,14 @@ body.jet-base{background:var(--jet-surface-ivory);margin:0;padding-bottom:104px}
   color:var(--jet-text-regular)}
 .pane .empty{color:var(--jet-text-muted);font-size:14px}
 @media(max-width:860px){.detsplit{grid-template-columns:1fr}.pane{position:static}}
+
+/* link: il sistema Jet e' quasi monocromatico, il blu del browser e' fuori posto */
+.sec a,.pane a,.voce a{color:var(--jet-text);text-decoration:underline;
+  text-decoration-color:var(--jet-border-strong);text-decoration-thickness:1px;
+  text-underline-offset:3px;transition:all var(--jet-transition) var(--jet-ease)}
+.sec a:hover,.pane a:hover,.voce a:hover{text-decoration-color:var(--jet-lime);
+  text-decoration-thickness:2px}
+.sec a:focus-visible,.pane a:focus-visible{outline:2px solid var(--jet-black);outline-offset:2px;border-radius:3px}
 </style>
 </head>
 <body class="jet-base">
@@ -1574,8 +1590,12 @@ function chain(res,st){
   const grp=t=>rows.push(`<tr class="grp"><td></td><td colspan="2" class="g">${t}</td></tr>`);
   const row=(op,label,val,voce,cls='')=>{
     const on=voce&&st.aperta===voce.id;
-    const nm=voce?`<button data-voce="${voce.id}" aria-pressed="${!!on}">${esc(label)}</button>`:esc(label);
-    rows.push(`<tr class="${cls}${on?' on':''}"><td class="op">${op}</td><td>${nm}</td>
+    const nm=voce
+      ? `<button class="lbl" aria-pressed="${!!on}">${esc(label)}
+           <span class="jet-info-dot" aria-hidden="true">i</span></button>`
+      : esc(label);
+    rows.push(`<tr class="${cls}${voce?' cl':''}${on?' on':''}"
+      ${voce?`data-voce="${voce.id}"`:''}><td class="op">${op}</td><td>${nm}</td>
       <td class="amt">${eur(Math.abs(val))}</td></tr>`);
   };
   grp('Dalla RAL all\'imponibile');
@@ -1606,12 +1626,16 @@ function chain(res,st){
       <div class="jet-body-xs jet-muted">Fonte</div>
       <a class="jet-body-s" href="${u}" target="_blank" rel="noopener">${esc(t)}</a>
       <div class="jet-body-xs jet-muted" style="margin-top:2px">${esc(d)}</div>`;})()
-    :`<div class="empty">Scegli una voce dalla catena per vederne formula, base e fonte.
-       Ogni riga è cliccabile.</div>`;
+    :`<div class="empty"><b>Nessuna voce selezionata.</b><br>
+       Clicca una riga della catena — quelle con il segno <span class="jet-info-dot" aria-hidden="true">i</span> —
+       per vederne formula, base di calcolo e fonte normativa.</div>`;
   const parts=[fmt(res.input.ral),'− '+fmt(res.kpi.totaleContributi),'− '+fmt(res.kpi.totaleImposte)]
     .concat(res.integrazioni>0?['+ '+fmt(res.integrazioni)]:[]);
   return `<div class="detsplit">
-    <div><div class="chainwrap"><table class="chain"><caption class="sr">Dalla RAL al netto annuo</caption>
+    <div>
+      <p class="chainhint"><span class="jet-info-dot" aria-hidden="true">i</span>
+        Le righe con questo segno si aprono: <b>clicca una voce</b> per vederne formula, base e fonte.</p>
+      <div class="chainwrap"><table class="chain"><caption class="sr">Dalla RAL al netto annuo</caption>
       <tbody>${rows.join('')}</tbody></table></div>
       <div class="jet-alert jet-alert--success" style="margin-top:18px">
         <div class="jet-alert-body"><div class="jet-alert-text recon">
@@ -1685,14 +1709,14 @@ function metodo(){
     <div>
       <h3 class="jet-h5" style="margin:0 0 4px">Limiti dichiarati</h3>
       <p class="jet-body-s jet-muted" style="margin:0 0 10px">Quattro, in chiaro. Un prototipo onesto dichiara dove smette di valere.</p>
-      <div class="jet-accordion">${LIMITI.map(([t,b])=>`<details><summary>${esc(t)}</summary>
+      <div class="jet-accordion">${LIMITI.map(([t,b])=>`<details><summary><span>${esc(t)}</span></summary>
         <div class="jet-body-s" style="padding-bottom:18px;color:var(--jet-text-regular);max-width:74ch">${esc(b)}</div>
       </details>`).join('')}</div>
     </div>
   </div>`;
 }
 function faq(){
-  return `<div class="jet-accordion">${FAQ.map(([q,a])=>`<details><summary>${q}</summary>
+  return `<div class="jet-accordion">${FAQ.map(([q,a])=>`<details><summary><span>${q}</span></summary>
     <div class="jet-body-s" style="padding-bottom:18px;color:var(--jet-text-regular);max-width:74ch">${a}</div>
   </details>`).join('')}</div>`;
 }
@@ -1710,7 +1734,7 @@ function sezioni(res,st){
      lede:'Le fasce sono in scala: la larghezza di ogni flusso è proporzionale al suo importo. Si parte dalla RAL, non dal costo azienda: questo strumento risponde a «dove vanno i soldi trattenuti sul mio lordo», non a quanto costi all\'azienda. Clicca una fascia per aprirne le voci.',
      body:`${sankey(res,260,13)}<div class="legend" style="margin-top:14px">${legendItems(res)}</div>`},
     {id:'dettaglio',eye:'Livello 3 — il dettaglio',t:'Ogni euro, voce per voce',
-     lede:'La catena completa con gli operatori in chiaro. Clicca una riga per vedere formula, base di calcolo e fonte normativa.',
+     lede:'La catena completa, con gli operatori in chiaro. Ogni riga contrassegnata si apre: cliccala e la spiegazione compare qui a fianco.',
      body:chain(res,st)},
     {id:'metodo',eye:'Metodo',t:'Come è costruito il calcolo',
      lede:'Le regole sono dichiarate, non selezionabili: un solo caso, spiegato per intero.',
@@ -1841,7 +1865,7 @@ function soglieVicine(ral,finestra){
 /* ============================================================
    STATO E EVENTI
    ============================================================ */
-const st={ralRaw:'35.000',mensilita:13,variant:'C',spiega:false,finestra:500,sogliaSotto:true,
+const st={ralRaw:'35.000',mensilita:13,variant:'B',spiega:false,finestra:500,sogliaSotto:true,
   aperta:null,attiva:'risultato',res:null,errore:null,dirty:false};
 
 function fromURL(){
@@ -1871,7 +1895,8 @@ function commit(silenzioso){
   else if(Number.isNaN(v)){st.errore='Solo cifre: usa la virgola per i decimali, per esempio 35.000,50.';st.res=null;}
   else if(Number(v)<0){st.errore='La RAL non può essere negativa.';st.res=null;}
   else if(Number(v)>9999999){st.errore='Oltre 9.999.999 € il calcolo esce dal perimetro dichiarato.';st.res=null;}
-  else{st.res=calcola(v,st.mensilita);st.dirty=false;}
+  else{st.res=calcola(v,st.mensilita);st.dirty=false;
+    if(!st.aperta)st.aperta='ivs';}   // mostra subito a cosa serve il pannello
   if(!silenzioso)render();
 }
 let obs=null;
