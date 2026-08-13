@@ -1620,7 +1620,7 @@ function pagina(res,st){
         <div class="sec-body">${s.body}</div>
       </div></section>`).join('')}
     <footer class="calc-footer">Prototipo di Riccardo Sartori per il task AI Builder @ Jet HR.</footer>
-    <dialog class="egg-modal" id="egg"><p>Se hai 3.000.000 di RAL l'ultimo problema è lo stipendio netto</p></dialog>`;
+    <dialog class="egg-modal" id="egg"><p>Se hai ${eur(res.input.ral)} di RAL l'ultimo problema è lo stipendio netto</p></dialog>`;
 }
 function vuoto(st){
   return `<div class="pg">${hero()}${form(st)}
