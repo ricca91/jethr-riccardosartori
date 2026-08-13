@@ -37,7 +37,7 @@ function calcola(ralInput,mensilita){
   const ecc=baseC>K.sogliaEcc?mul(baseC-K.sogliaEcc,K.ecc):0n;
   push('ivs','Contributi previdenziali IVS','contributo',baseC,-ivs,'inps101',
     `${fmt(nu(baseC))} × 9,19%`);
-  if(ecc>0n)push('ecc','Contributo aggiuntivo 1%','contributo',baseC-K.sogliaEcc,-ecc,'inps27',
+  if(ecc>0n)push('ecc','Contributo aggiuntivo 1%','contributo',baseC-K.sogliaEcc,-ecc,'inps6',
     `(${fmt(nu(baseC))} − 56.224,00) × 1%`);
   const contributi=rc(ivs)+rc(ecc);
   const I=RAL-contributi;
