@@ -13,7 +13,7 @@ Node 18 o successivo. Nessuna dipendenza, nessun `package.json`, niente da insta
 Il motore (`docs/prototype/motore.js`) è uno script classico: la stessa riga di codice
 gira nella pagina aperta con un doppio clic e in Node, senza duplicati.
 
-Stato al 13 agosto 2026: **31 prove, tutte verdi** (Node v22.22.2).
+Stato al 13 agosto 2026: **32 prove, tutte verdi** (Node v22.22.2).
 
 ## Le tre categorie, e perché stanno separate
 
