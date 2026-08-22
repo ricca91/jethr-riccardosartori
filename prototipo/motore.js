@@ -7,99 +7,321 @@
    In Node lo stesso file si carica con require() grazie
    all'export in fondo — così `node --test` gira senza
    installare niente e senza duplicare la logica.
+
+   Qui dentro escono NUMERI. Titoli e formule li compone la
+   pagina: una voce non sa come verrà raccontata (CONTEXT.md,
+   «voce» contro «riga»). Resta nel motore la `fonte`, perché è
+   un'affermazione sulla regola, non su come la disegni.
    ============================================================ */
 
 /* ============================================================
-   MOTORE — contratto di calcolo #4, regole-2026-v1
-   Virgola fissa su BigInt (scala 1e8). Mai float binario.
+   IMPALCATURA — virgola fissa su BigInt (scala 1e8). Mai float
+   binario. I nomi qui sono in inglese: servono a far funzionare
+   la macchina, non a descrivere una norma.
    ============================================================ */
 const SC=8n,S=10n**8n,CENT=10n**6n,D4=10n**4n;
-function d(x){const s=String(x).trim();const neg=s.startsWith('-');
+function dec(x){const s=String(x).trim();const neg=s.startsWith('-');
   const[i,f='']=(neg?s.slice(1):s).split('.');
   const frac=(f+'0'.repeat(Number(SC))).slice(0,Number(SC));
   const v=BigInt(i||'0')*S+BigInt(frac||'0');return neg?-v:v;}
 const mul=(a,b)=>(a*b)/S;
-const rc=a=>{const neg=a<0n,x=neg?-a:a;const q=x/CENT,r=x%CENT;
-  const y=(r*2n>=CENT?q+1n:q)*CENT;return neg?-y:y;};
-const tr4=a=>(a/D4)*D4;
-const nu=a=>Number(a)/1e8;
-const K={massimale:d('122295'),sogliaEcc:d('56224'),ivs:d('0.0919'),ecc:d('0.01'),
-  irpef:[[d('28000'),d('0.23')],[d('50000'),d('0.33')],[null,d('0.43')]],
-  reg:[[d('15000'),d('0.0123')],[d('28000'),d('0.0158')],[d('50000'),d('0.0172')],[null,d('0.0173')]],
-  comAliq:d('0.008'),comEsente:d('23000')};
+const div=(a,b)=>(a*S)/b;
+const min=(a,b)=>a<b?a:b;
+const toNumber=a=>Number(a)/1e8;
 
-function calcola(ralInput,mensilita){
-  const RAL=rc(d(ralInput)),v=[];
-  const push=(id,et,tipo,base,imp,fonte,formula)=>v.push({id,et,tipo,base:nu(base),
-    importo:nu(rc(imp)),_i:rc(imp),fonte,formula});
-  const baseC=RAL<K.massimale?RAL:K.massimale;
-  const ivs=mul(baseC,K.ivs);
-  const ecc=baseC>K.sogliaEcc?mul(baseC-K.sogliaEcc,K.ecc):0n;
-  push('ivs','Contributi previdenziali IVS','contributo',baseC,-ivs,'inps101',
-    `${fmt(nu(baseC))} × 9,19%`);
-  if(ecc>0n)push('ecc','Contributo aggiuntivo 1%','contributo',baseC-K.sogliaEcc,-ecc,'inps6',
-    `(${fmt(nu(baseC))} − 56.224,00) × 1%`);
-  const contributi=rc(ivs)+rc(ecc);
-  const I=RAL-contributi;
-  let lorda=0n,prev=0n;
-  for(const[cap,al]of K.irpef){const top=cap===null?I:(I<cap?I:cap);
-    if(top>prev)lorda+=mul(top-prev,al);prev=cap===null?prev:cap;if(cap!==null&&I<=cap)break;}
-  let detrLav=0n,fdet='';
-  if(I<=d('15000')){detrLav=d('1955');fdet='1.955,00 (fisso fino a 15.000 €)';}
-  else if(I<=d('28000')){const rap=tr4(((d('28000')-I)*S)/d('13000'));
-    detrLav=d('1910')+mul(d('1190'),rap);fdet=`1.910 + 1.190 × ${nu(rap).toFixed(4)}`;}
-  else if(I<=d('50000')){const rap=tr4(((d('50000')-I)*S)/d('22000'));
-    detrLav=mul(d('1910'),rap);fdet=`1.910 × ${nu(rap).toFixed(4)}  (rapporto troncato a 4 decimali)`;}
-  else fdet='0 (imponibile oltre 50.000 €)';
-  const b65=(I>d('25000')&&I<=d('35000'))?d('65'):0n;
-  const detrLavTot=detrLav+b65;
-  let detrUlt=0n,fult='';
-  if(I>d('20000')&&I<=d('32000')){detrUlt=d('1000');fult='1.000,00 (imponibile 20–32k)';}
-  else if(I>d('32000')&&I<=d('40000')){detrUlt=mul(d('1000'),((d('40000')-I)*S)/d('8000'));
-    fult=`1.000 × (40.000 − ${fmt(nu(I))}) ÷ 8.000`;}
-  const nettaRaw=(lorda-detrLavTot-detrUlt);
-  const netta=nettaRaw>0n?nettaRaw:0n;
-  // Capienza: le detrazioni abbattono l'imposta, non sono rimborsabili.
-  // Nelle voci entra la quota effettivamente usata, altrimenti la somma non tornerebbe.
-  const usoLav=detrLavTot<lorda?detrLavTot:lorda;
-  const resto=lorda-usoLav;
-  const usoUlt=detrUlt<resto?detrUlt:resto;
-  const capiente=(detrLavTot+detrUlt)<=lorda;
-  const capNota=q=>capiente?'':`  ⚠ capienza: usata ${fmt(nu(q))} € — le detrazioni non sono rimborsabili`;
-  push('lorda','IRPEF lorda','imposta',I,-lorda,'l199',
-    `23% × min(${fmt(nu(I))}; 28.000) + 33% sulla quota 28–50k + 43% oltre`);
-  push('detrlav',b65>0n?'Detrazione lavoro dipendente (+65 €)':'Detrazione lavoro dipendente','detrazione',
-    I,usoLav,'tuir13',fdet+(b65>0n?'  +65 (imponibile 25–35k)':'')+
-    (capiente?'':`  →  spettante ${fmt(nu(detrLavTot))} €,${capNota(usoLav)}`));
-  if(detrUlt>0n)push('detrult','Ulteriore detrazione','detrazione',I,usoUlt,'l207c6',
-    fult+(capiente?'':`  →  spettante ${fmt(nu(detrUlt))} €,${capNota(usoUlt)}`));
-  const dovute=netta>0n;
-  let reg=0n;prev=0n;
-  if(dovute)for(const[cap,al]of K.reg){const top=cap===null?I:(I<cap?I:cap);
-    if(top>prev)reg+=mul(top-prev,al);prev=cap===null?prev:cap;if(cap!==null&&I<=cap)break;}
-  const com=(dovute&&I>K.comEsente)?mul(I,K.comAliq):0n;
-  push('addreg','Addizionale regionale Lombardia','imposta',I,-reg,'lomb',
-    dovute?'1,23% fino a 15k · 1,58% 15–28k · 1,72% 28–50k · 1,73% oltre':'0 — non dovuta: IRPEF netta è zero');
-  push('addcom','Addizionale comunale Milano','imposta',I,-com,'mi',
-    !dovute?'0 — non dovuta: IRPEF netta è zero':(I>K.comEsente?`${fmt(nu(I))} × 0,8% (sull'intero imponibile)`:'0 — esente fino a 23.000 € di imponibile'));
-  let somma=0n,fsom='';
-  if(I<=d('20000')){const al=I<=d('8500')?d('0.071'):(I<=d('15000')?d('0.053'):d('0.048'));
-    somma=mul(I,al);fsom=`${fmt(nu(I))} × ${(nu(al)*100).toFixed(1).replace('.',',')}%`;}
-  const ti=(I<=d('15000')&&lorda>(detrLav-d('75')))?d('1200'):0n;
-  if(somma>0n)push('somma','Somma non imponibile (cuneo)','integrazione',I,somma,'l207c4',fsom);
-  if(ti>0n)push('ti','Trattamento integrativo','integrazione',I,ti,'dl3',
-    '1.200,00 — imponibile ≤ 15.000 e IRPEF lorda > detrazione − 75');
-  const netto=v.reduce((a,x)=>a+x._i,RAL);
-  const imposte=rc(netta)+rc(reg)+rc(com);
-  const media=rc((netto*S)/d(String(mensilita)));
-  const somme=v.reduce((a,x)=>a+x._i,0n);
-  return{input:{ral:nu(RAL),mensilita},versioneRegole:'regole-2026-v1',
-    voci:v.map(({_i,...r})=>r),
-    kpi:{nettoAnnuo:nu(netto),mediaMensile:nu(media),totaleImposte:nu(imposte),totaleContributi:nu(contributi)},
-    imponibile:nu(I),irpefNetta:nu(rc(netta)),integrazioni:nu(rc(somma)+rc(ti)),
-    aliquotaContributivaEffettiva:RAL>0n?nu(mul(((contributi*S)/RAL),d('100'))):0,
-    riconciliazione:{verificata:netto===RAL+somme,identita:'RAL − contributi − imposte + integrazioni = netto annuo'}};
+/* Arrotondamento e troncamento non sono impalcatura: sono due
+   regole del contratto, e stanno in italiano come le altre.
+   Il netto è la somma delle voci arrotondate al centesimo
+   (HALF_UP); i rapporti dell'art. 13 si troncano alla quarta
+   cifra decimale, perché la norma dice troncare, non arrotondare. */
+const arrotondaCentesimi=a=>{const neg=a<0n,x=neg?-a:a;const q=x/CENT,r=x%CENT;
+  const y=(r*2n>=CENT?q+1n:q)*CENT;return neg?-y:y;};
+const troncaQuattro=a=>(a/D4)*D4;
+
+/* ============================================================
+   COSTANTI — nessuna soglia e nessuna aliquota compare come
+   letterale dentro la logica: se un numero viene da una circolare
+   o da una legge, sta qui e ha un nome.
+   ============================================================ */
+const K={
+  contributi:{
+    aliquotaIvs:dec('0.0919'),            // INPS circ. 101/2024
+    massimale:dec('122295'),              // INPS circ. 6/2026
+    primaFascia:dec('56224'),             // INPS circ. 6/2026
+    aliquotaAggiuntivo:dec('0.01'),       // 1% oltre la prima fascia
+  },
+  irpef:{                                 // L. 199/2025, art. 1 c. 3
+    scaglioni:[[dec('28000'),dec('0.23')],[dec('50000'),dec('0.33')],[null,dec('0.43')]],
+  },
+  detrazioneLavoro:{                      // TUIR, art. 13
+    sogliaFissa:dec('15000'),   importoFisso:dec('1955'),
+    sogliaIntermedia:dec('28000'), quotaBase:dec('1910'),
+    quotaAggiuntiva:dec('1190'), ampiezzaIntermedia:dec('13000'),
+    sogliaFinale:dec('50000'),  ampiezzaFinale:dec('22000'),
+    maggiorazione:dec('65'), maggiorazioneDa:dec('25000'), maggiorazioneA:dec('35000'),
+  },
+  ulterioreDetrazione:{                   // L. 207/2024, art. 1 c. 6
+    importoPieno:dec('1000'), da:dec('20000'),
+    pienoFinoA:dec('32000'), a:dec('40000'), ampiezzaDecrescente:dec('8000'),
+  },
+  regionale:{                             // Regione Lombardia
+    scaglioni:[[dec('15000'),dec('0.0123')],[dec('28000'),dec('0.0158')],
+               [dec('50000'),dec('0.0172')],[null,dec('0.0173')]],
+  },
+  comunale:{                              // Comune di Milano
+    aliquota:dec('0.008'), esenzioneFinoA:dec('23000'),
+  },
+  sommaNonImponibile:{                    // L. 207/2024, art. 1 c. 4-5
+    limite:dec('20000'),
+    aliquote:[[dec('8500'),dec('0.071')],[dec('15000'),dec('0.053')],[dec('20000'),dec('0.048')]],
+  },
+  trattamentoIntegrativo:{                // D.L. 3/2020, art. 1
+    limiteImponibile:dec('15000'), importo:dec('1200'), scartoDetrazione:dec('75'),
+  },
+};
+
+/* L'unica somma che oggi esiste. Il costo azienda ne sarà una
+   seconda: la guardia di riconciliazione ne verifica una alla volta. */
+const NETTO_LAVORATORE='nettoLavoratore';
+const SOMME=[NETTO_LAVORATORE];
+
+/* ============================================================
+   LE VOCI, UNA FUNZIONE PER CIASCUNA
+   Ogni funzione qui sotto prende numeri e restituisce numeri.
+   Si può esercitare da sola, a un imponibile scelto, senza
+   passare da calcola() e senza cercare la RAL che lo produce.
+   ============================================================ */
+
+/* Il totale per scaglioni progressivi: aliquota su aliquota, ogni
+   fascia sulla sola quota che le compete. Lo usano l'IRPEF lorda
+   e l'addizionale regionale — stessa forma, tabelle diverse. */
+function perScaglioni(base,scaglioni){
+  let totale=0n,precedente=0n;
+  for(const[tetto,aliquota]of scaglioni){
+    const cima=tetto===null?base:min(base,tetto);
+    if(cima>precedente)totale+=mul(cima-precedente,aliquota);
+    if(tetto===null)break;
+    precedente=tetto;
+    if(base<=tetto)break;
+  }
+  return totale;
 }
+
+/* La base contributiva si ferma al massimale: sopra, si fermano
+   sia il 9,19% sia l'1%, perché guardano la stessa base. Da qui
+   la contribuzione regressiva oltre 122.295 €. */
+function baseContributiva(ral){return min(ral,K.contributi.massimale);}
+
+function contributiIvs(ral){
+  const base=baseContributiva(ral);
+  return{base,aliquota:K.contributi.aliquotaIvs,importo:mul(base,K.contributi.aliquotaIvs)};
+}
+
+function contributoAggiuntivo(ral){
+  const base=baseContributiva(ral);
+  const eccedenza=base>K.contributi.primaFascia?base-K.contributi.primaFascia:0n;
+  return{base,eccedenza,soglia:K.contributi.primaFascia,
+    aliquota:K.contributi.aliquotaAggiuntivo,
+    importo:mul(eccedenza,K.contributi.aliquotaAggiuntivo)};
+}
+
+/* Il netto contributivo, arrotondato voce per voce prima di
+   sommare: è la stessa convenzione che regge il netto annuo. */
+function contributi(ral){
+  return arrotondaCentesimi(contributiIvs(ral).importo)
+        +arrotondaCentesimi(contributoAggiuntivo(ral).importo);
+}
+
+function imponibile(ral){return ral-contributi(ral);}
+
+function irpefLorda(imponibile){return perScaglioni(imponibile,K.irpef.scaglioni);}
+
+/* Art. 13 TUIR: tre fasce e una maggiorazione. Dice quanto
+   SPETTA, non quanto se ne usa — quello lo decide applicaCapienza.
+   Il rapporto si tronca a quattro decimali: a precisione piena, a
+   RAL 35.000, la detrazione sarebbe 1.581,52 invece di 1.581,48. */
+function detrazioneLavoroDipendente(imponibile){
+  const D=K.detrazioneLavoro;
+  let quotaFissa=0n,quotaVariabile=0n,rapporto=null,base=0n;
+  if(imponibile<=D.sogliaFissa){
+    quotaFissa=D.importoFisso;
+    base=quotaFissa;
+  }else if(imponibile<=D.sogliaIntermedia){
+    quotaFissa=D.quotaBase;quotaVariabile=D.quotaAggiuntiva;
+    rapporto=troncaQuattro(div(D.sogliaIntermedia-imponibile,D.ampiezzaIntermedia));
+    base=quotaFissa+mul(quotaVariabile,rapporto);
+  }else if(imponibile<=D.sogliaFinale){
+    quotaVariabile=D.quotaBase;
+    rapporto=troncaQuattro(div(D.sogliaFinale-imponibile,D.ampiezzaFinale));
+    base=mul(quotaVariabile,rapporto);
+  }
+  const maggiorazione=(imponibile>D.maggiorazioneDa&&imponibile<=D.maggiorazioneA)?D.maggiorazione:0n;
+  return{quotaFissa,quotaVariabile,rapporto,maggiorazione,spettante:base+maggiorazione};
+}
+
+/* L. 207/2024 c. 6: piena fra 20.000 e 32.000, poi si consuma
+   linearmente fino a 40.000. Anche questa dice quanto spetta. */
+function ulterioreDetrazione(imponibile){
+  const U=K.ulterioreDetrazione;
+  if(imponibile>U.da&&imponibile<=U.pienoFinoA)
+    return{quotaFissa:U.importoPieno,rapporto:null,spettante:U.importoPieno};
+  if(imponibile>U.pienoFinoA&&imponibile<=U.a){
+    const rapporto=div(U.a-imponibile,U.ampiezzaDecrescente);
+    return{quotaFissa:U.importoPieno,rapporto,spettante:mul(U.importoPieno,rapporto)};
+  }
+  return{quotaFissa:0n,rapporto:null,spettante:0n};
+}
+
+/* CAPIENZA — una detrazione abbatte l'imposta, non viene
+   rimborsata. Qui si decide quanto se ne USA, e in che ordine:
+   prima quella da lavoro dipendente, poi l'ulteriore. L'ordine
+   dell'array è l'ordine di consumo, ed è la ragione per cui
+   questo passo ha un nome invece di stare sciolto in tre righe.
+   Quel che resta dell'imposta dopo il consumo è l'IRPEF netta. */
+function applicaCapienza(lorda,spettanti){
+  let residua=lorda;
+  const usi=spettanti.map(spettante=>{
+    const uso=min(spettante,residua);
+    residua-=uso;
+    return uso;
+  });
+  return{usi,residua};
+}
+
+/* Le addizionali si pagano solo se l'IRPEF netta è dovuta: a
+   imposta azzerata dalle detrazioni non c'è addizionale. */
+function addizionaleRegionale(imponibile,dovute){
+  return dovute?perScaglioni(imponibile,K.regionale.scaglioni):0n;
+}
+
+/* Esenzione secca, non franchigia: superati i 23.000 € si paga
+   sull'intero imponibile, non sull'eccedenza. */
+function addizionaleComunale(imponibile,dovute){
+  return(dovute&&imponibile>K.comunale.esenzioneFinoA)?mul(imponibile,K.comunale.aliquota):0n;
+}
+
+function sommaNonImponibile(imponibile){
+  if(imponibile>K.sommaNonImponibile.limite)return{aliquota:null,importo:0n};
+  const riga=K.sommaNonImponibile.aliquote.find(([tetto])=>imponibile<=tetto);
+  if(!riga)return{aliquota:null,importo:0n};
+  return{aliquota:riga[1],importo:mul(imponibile,riga[1])};
+}
+
+/* D.L. 3/2020: spetta sotto i 15.000 € di imponibile solo se
+   l'IRPEF lorda supera la detrazione da lavoro dipendente
+   diminuita di 75 €. In questa fascia la maggiorazione di 65 €
+   non c'è (parte da 25.000), quindi `detrazione` è la detrazione
+   dell'art. 13 sia che la si legga con sia senza. */
+function trattamentoIntegrativo(imponibile,lorda,detrazione){
+  const T=K.trattamentoIntegrativo;
+  return(imponibile<=T.limiteImponibile&&lorda>(detrazione-T.scartoDetrazione))?T.importo:0n;
+}
+
+/* RICONCILIAZIONE — la guardia, non una prova di correttezza:
+   dice che i conti tornano, non che le aliquote sono giuste.
+   Verifica UNA somma alla volta, non «tutto»: filtra le voci che
+   entrano nell'identità chiesta e ricostruisce il netto da lì. */
+const TIPI_DELL_IDENTITA=['contributo','imposta','detrazione','integrazione'];
+function riconcilia(ral,voci,somma=NETTO_LAVORATORE){
+  const della=voci.filter(v=>v.somma===somma);
+  const netto=della.reduce((a,v)=>a+v._i,ral);
+  /* L'identità ricostruita per tipo. Che la partizione torni è
+     algebra — è il limite dichiarato di questa guardia. Quello che
+     il controllo prende davvero sono due voci orfane: una con un
+     tipo che nell'identità non compare, e una che dichiara una
+     somma che non esiste (o non ne dichiara nessuna), e che quindi
+     sparirebbe dal netto senza che nessuno se ne accorga.
+     Le voci di UN'ALTRA somma nota non entrano qui: la
+     riconciliazione ne verifica una alla volta. */
+  const perTipo=t=>della.filter(v=>v.tipo===t).reduce((a,v)=>a+v._i,0n);
+  const daIdentita=TIPI_DELL_IDENTITA.reduce((a,t)=>a+perTipo(t),ral);
+  return{netto,voci:della.length,
+    verificata:della.length>0
+      &&netto===daIdentita
+      &&voci.every(v=>SOMME.includes(v.somma))};
+}
+
+/* ============================================================
+   LA SEQUENZA — l'ordine dei passi è vincolante, quindi l'ordine
+   È il codice: si legge dall'alto in basso e nessuno può
+   riordinarlo per sbaglio spostando una riga di una tabella.
+   ============================================================ */
+function calcola(ralInput,mensilita){
+  const RAL=arrotondaCentesimi(dec(ralInput));
+  const voci=[];
+  const emetti=(id,tipo,fonte,base,importo,dettagli={})=>{
+    const i=arrotondaCentesimi(importo);
+    voci.push({id,tipo,somma:NETTO_LAVORATORE,base:toNumber(base),
+      importo:toNumber(i),fonte,
+      ...Object.fromEntries(Object.entries(dettagli)
+        .map(([k,v])=>[k,typeof v==='bigint'?toNumber(v):v])),
+      _i:i});
+  };
+
+  /* 1-2. dalla RAL all'imponibile */
+  const ivs=contributiIvs(RAL);
+  emetti('ivs','contributo','inps101',ivs.base,-ivs.importo,{aliquota:ivs.aliquota});
+  const agg=contributoAggiuntivo(RAL);
+  if(agg.importo>0n)
+    emetti('ecc','contributo','inps6',agg.eccedenza,-agg.importo,
+      {baseContributiva:agg.base,soglia:agg.soglia,aliquota:agg.aliquota});
+  const contributiTotali=contributi(RAL);
+  const I=imponibile(RAL);
+
+  /* 3. IRPEF lorda */
+  const lorda=irpefLorda(I);
+
+  /* 4-5. quanto spetta */
+  const detrLav=detrazioneLavoroDipendente(I);
+  const detrUlt=ulterioreDetrazione(I);
+
+  /* 6. quanto se ne usa, e in che ordine */
+  const capienza=applicaCapienza(lorda,[detrLav.spettante,detrUlt.spettante]);
+  const[usoLav,usoUlt]=capienza.usi;
+  const netta=capienza.residua;
+
+  emetti('lorda','imposta','l199',I,-lorda);
+  emetti('detrlav','detrazione','tuir13',I,usoLav,{
+    spettante:detrLav.spettante,quotaFissa:detrLav.quotaFissa,
+    quotaVariabile:detrLav.quotaVariabile,rapporto:detrLav.rapporto,
+    maggiorazione:detrLav.maggiorazione,capiente:usoLav===detrLav.spettante});
+  if(detrUlt.spettante>0n)
+    emetti('detrult','detrazione','l207c6',I,usoUlt,{
+      spettante:detrUlt.spettante,quotaFissa:detrUlt.quotaFissa,
+      rapporto:detrUlt.rapporto,capiente:usoUlt===detrUlt.spettante});
+
+  /* 7-8. addizionali locali */
+  const dovute=netta>0n;
+  const reg=addizionaleRegionale(I,dovute);
+  const com=addizionaleComunale(I,dovute);
+  emetti('addreg','imposta','lomb',I,-reg,{dovuta:dovute});
+  emetti('addcom','imposta','mi',I,-com,{dovuta:dovute,aliquota:K.comunale.aliquota});
+
+  /* 9-10. integrazioni di legge */
+  const cuneo=sommaNonImponibile(I);
+  const ti=trattamentoIntegrativo(I,lorda,detrLav.spettante);
+  if(cuneo.importo>0n)
+    emetti('somma','integrazione','l207c4',I,cuneo.importo,{aliquota:cuneo.aliquota});
+  if(ti>0n)
+    emetti('ti','integrazione','dl3',I,ti,{quotaFissa:ti});
+
+  /* 11. la guardia */
+  const conti=riconcilia(RAL,voci);
+  const netto=conti.netto;
+  const imposte=arrotondaCentesimi(netta)+arrotondaCentesimi(reg)+arrotondaCentesimi(com);
+  const media=arrotondaCentesimi(div(netto,dec(String(mensilita))));
+
+  return{input:{ral:toNumber(RAL),mensilita},versioneRegole:'regole-2026-v1',
+    voci:voci.map(({_i,...r})=>r),
+    kpi:{nettoAnnuo:toNumber(netto),mediaMensile:toNumber(media),
+      totaleImposte:toNumber(imposte),totaleContributi:toNumber(contributiTotali)},
+    imponibile:toNumber(I),irpefNetta:toNumber(arrotondaCentesimi(netta)),
+    integrazioni:toNumber(arrotondaCentesimi(cuneo.importo)+arrotondaCentesimi(ti)),
+    aliquotaContributivaEffettiva:RAL>0n?toNumber(mul(div(contributiTotali,RAL),dec('100'))):0,
+    riconciliazione:{verificata:conti.verificata,
+      identita:'RAL − contributi − imposte + integrazioni = netto annuo'}};
+}
+
 /* ---------- formattazione ---------- */
 const grp=i=>i.replace(/\B(?=(\d{3})+(?!\d))/g,'.');
 const fmt=n=>{const neg=n<0,x=Math.abs(n).toFixed(2),[i,f]=x.split('.');
@@ -143,14 +365,22 @@ function soglie(){
    richiamare calcola() — è ciò che rende vera a schermo la tesi
    del contratto: cambiare mensilità non può muovere il netto. */
 function applicaMensilita(res,mensilita){
-  const netto=d(res.kpi.nettoAnnuo.toFixed(2));
-  const media=rc((netto*S)/d(String(mensilita)));
+  const netto=dec(res.kpi.nettoAnnuo.toFixed(2));
+  const media=arrotondaCentesimi(div(netto,dec(String(mensilita))));
   return{...res,input:{...res.input,mensilita},
-    kpi:{...res.kpi,mediaMensile:nu(media)}};
+    kpi:{...res.kpi,mediaMensile:toNumber(media)}};
 }
 
 /* Node: require('./motore.js'). Browser: `module` non esiste e
    le dichiarazioni qui sopra sono già globali per la pagina. */
 if(typeof module!=='undefined'&&module.exports){
-  module.exports={calcola,applicaMensilita,parseRal,soglie,SALTI,fmt,eur,K};
+  module.exports={calcola,applicaMensilita,parseRal,soglie,SALTI,fmt,eur,K,
+    NETTO_LAVORATORE,SOMME,TIPI_DELL_IDENTITA,
+    /* impalcatura, per provare le voci con soli numeri */
+    dec,toNumber,mul,div,
+    /* le voci e i passi, uno per uno */
+    baseContributiva,contributiIvs,contributoAggiuntivo,contributi,imponibile,
+    perScaglioni,irpefLorda,detrazioneLavoroDipendente,ulterioreDetrazione,
+    applicaCapienza,addizionaleRegionale,addizionaleComunale,
+    sommaNonImponibile,trattamentoIntegrativo,riconcilia};
 }

@@ -11,6 +11,12 @@
                           estremi: dove un motore sbagliato si rompe.
    C — NON-REGRESSIONE.   Rete larga. Dice "nessuno ha cambiato
                           niente", non "è giusto".
+   D — LE VOCI DA SOLE.   Ogni voce del contratto esercitata a un
+                          imponibile scelto, con soli numeri, senza
+                          passare da calcola(). È la categoria che
+                          dice DOVE si è rotto, non solo CHE si è
+                          rotto: A e B guardano il risultato finale,
+                          qui si guarda una funzione alla volta.
 
    Regola vincolante: i valori attesi si rigenerano dal motore, non
    si ricopiano dai ticket a monte. I ticket #2, #3 e #4 citano numeri
@@ -22,7 +28,8 @@
 
 const test=require('node:test');
 const assert=require('node:assert/strict');
-const {calcola,applicaMensilita,parseRal,soglie,SALTI}=require('./motore.js');
+const M=require('./motore.js');
+const {calcola,applicaMensilita,parseRal,soglie,SALTI}=M;
 
 const netto=r=>calcola(r,13).kpi.nettoAnnuo;
 const voce=(res,id)=>res.voci.find(v=>v.id===id);
@@ -137,8 +144,8 @@ const SOGLIE_ATTESE=[
    sopra:r=>assert.equal(importo(r,'ti'),1200)},
   {ral:'9360.21', delta:-257.54,
    causa:'scattano le addizionali e la somma non imponibile passa dal 7,1% al 5,3%',
-   sotto:r=>{assert.equal(importo(r,'addreg'),0);assert.match(voce(r,'somma').formula,/7,1%/);},
-   sopra:r=>{assert.ok(importo(r,'addreg')<0);assert.match(voce(r,'somma').formula,/5,3%/);}},
+   sotto:r=>{assert.equal(importo(r,'addreg'),0);assert.equal(voce(r,'somma').aliquota,0.071);},
+   sopra:r=>{assert.ok(importo(r,'addreg')<0);assert.equal(voce(r,'somma').aliquota,0.053);}},
   {ral:'16518.02', delta:-130.11,
    causa:'decade il trattamento integrativo (imponibile 15.000 €)',
    sotto:r=>assert.equal(importo(r,'ti'),1200),
@@ -153,12 +160,12 @@ const SOGLIE_ATTESE=[
    sopra:r=>assert.ok(importo(r,'addcom')<0)},
   {ral:'27530.02', delta:65.01,
    causa:'si attiva la maggiorazione di 65 € (imponibile 25.000 €)',
-   sotto:r=>assert.doesNotMatch(voce(r,'detrlav').et,/\+65/),
-   sopra:r=>assert.match(voce(r,'detrlav').et,/\+65 €/)},
+   sotto:r=>assert.equal(voce(r,'detrlav').maggiorazione,0),
+   sopra:r=>assert.equal(voce(r,'detrlav').maggiorazione,65)},
   {ral:'38542.02', delta:-64.99,
    causa:'decade la maggiorazione di 65 € (imponibile 35.000 €)',
-   sotto:r=>assert.match(voce(r,'detrlav').et,/\+65 €/),
-   sopra:r=>assert.doesNotMatch(voce(r,'detrlav').et,/\+65/)},
+   sotto:r=>assert.equal(voce(r,'detrlav').maggiorazione,65),
+   sopra:r=>assert.equal(voce(r,'detrlav').maggiorazione,0)},
 ];
 
 /* Netto continuo, derivata discontinua: qui il netto NON salta, cambia il
@@ -342,5 +349,224 @@ test.describe('C — non-regressione',()=>{
     };
     for(const[ral,atteso]of Object.entries(golden))
       assert.equal(netto(ral),atteso,`RAL ${ral}`);
+  });
+});
+
+
+/* ============================================================
+   D — LE VOCI DA SOLE
+   Ogni voce del contratto esercitata a un imponibile SCELTO, con
+   soli numeri, senza passare da calcola(). Prima di #15 non si
+   poteva: per esercitare l'art. 13 a 31.783,50 € bisognava
+   trovare la RAL che quell'imponibile lo produce.
+
+   Le funzioni parlano in decimale a virgola fissa, quindi i
+   numeri entrano con dec() ed escono con toNumber(): sono le due
+   sole parti di impalcatura che questa categoria tocca.
+   ============================================================ */
+const {dec,toNumber}=M;
+const num=x=>c2(toNumber(x));
+
+test.describe('D — le voci da sole',()=>{
+
+  test.describe('contributi', ()=>{
+    /* INPS circ. 101/2024: 9,19% sull\'imponibile previdenziale. */
+    test('contributiIvs — 9,19%, e la base si ferma al massimale',()=>{
+      assert.equal(num(M.contributiIvs(dec('35000')).importo),3216.50);
+      assert.equal(num(M.contributiIvs(dec('122295')).base),122295);
+      assert.equal(num(M.contributiIvs(dec('122295')).importo),11238.91);
+      // 122.295 × 9,19% = 11.238,9105 — sopra il massimale non si muove più
+      assert.equal(num(M.contributiIvs(dec('200000')).base),122295);
+      assert.equal(num(M.contributiIvs(dec('1000000')).importo),11238.91);
+    });
+
+    /* INPS circ. 6/2026: 1% sulla quota oltre la prima fascia (56.224 €),
+       sulla stessa base contributiva, quindi anch\'essa tagliata al massimale. */
+    test('contributoAggiuntivo — 1% oltre 56.224, mai sotto',()=>{
+      assert.equal(num(M.contributoAggiuntivo(dec('50000')).importo),0);
+      assert.equal(num(M.contributoAggiuntivo(dec('56224')).eccedenza),0);
+      assert.equal(num(M.contributoAggiuntivo(dec('60000')).eccedenza),3776);
+      assert.equal(num(M.contributoAggiuntivo(dec('60000')).importo),37.76);
+      // (122.295 − 56.224) × 1% = 660,71 — e lì resta
+      assert.equal(num(M.contributoAggiuntivo(dec('200000')).importo),660.71);
+    });
+
+    test('imponibile — RAL meno i contributi, arrotondati voce per voce',()=>{
+      assert.equal(num(M.imponibile(dec('35000'))),31783.50);
+      assert.equal(num(M.imponibile(dec('0'))),0);
+      // 200.000 − (11.238,91 + 660,71) = 188.100,38
+      assert.equal(num(M.imponibile(dec('200000'))),188100.38);
+    });
+  });
+
+  test.describe('IRPEF',()=>{
+    /* Progressività: ogni aliquota vede solo la quota che le compete.
+       Se `perScaglioni` applicasse l\'aliquota all\'intero imponibile,
+       a 60.000 € darebbe 25.800 invece di 18.000. */
+    test('irpefLorda — 23 / 33 / 43 per scaglioni, non sull\'intero',()=>{
+      assert.equal(num(M.irpefLorda(dec('0'))),0);
+      assert.equal(num(M.irpefLorda(dec('28000'))),6440);          // 28.000 × 23%
+      assert.equal(num(M.irpefLorda(dec('31783.50'))),7688.56);    // 6.440 + 3.783,50 × 33%
+      assert.equal(num(M.irpefLorda(dec('60000'))),18000);         // 6.440 + 7.260 + 4.300
+      assert.notEqual(num(M.irpefLorda(dec('60000'))),25800);      // 60.000 × 43%
+    });
+
+    /* TUIR art. 13. Dice quanto SPETTA: la capienza è un altro passo. */
+    test('detrazioneLavoroDipendente — le tre fasce',()=>{
+      assert.equal(num(M.detrazioneLavoroDipendente(dec('10000')).spettante),1955);
+      assert.equal(num(M.detrazioneLavoroDipendente(dec('15000')).spettante),1955);
+      // rapporto (28.000 − 21.500) ÷ 13.000 = 0,5 → 1.910 + 1.190 × 0,5
+      assert.equal(num(M.detrazioneLavoroDipendente(dec('21500')).rapporto),0.5);
+      assert.equal(num(M.detrazioneLavoroDipendente(dec('21500')).spettante),2505);
+      assert.equal(num(M.detrazioneLavoroDipendente(dec('50000')).spettante),0);
+      assert.equal(M.detrazioneLavoroDipendente(dec('60000')).rapporto,null);
+      assert.equal(num(M.detrazioneLavoroDipendente(dec('60000')).spettante),0);
+    });
+
+    /* Il troncamento a quattro decimali, esercitato dove nasce invece
+       che sul netto finale: (50.000 − 31.783,50) ÷ 22.000 = 0,828022…
+       Arrotondando si otterrebbe 0,8280 lo stesso; il caso che
+       distingue è il valore pieno, che darebbe 1.581,52. */
+    test('detrazioneLavoroDipendente — il rapporto si tronca a 4 decimali',()=>{
+      const d=M.detrazioneLavoroDipendente(dec('31783.50'));
+      assert.equal(toNumber(d.rapporto),0.828);
+      assert.equal(c2(toNumber(d.spettante)-65),1581.48);
+      assert.notEqual(c2(toNumber(d.spettante)-65),1581.52);
+    });
+
+    /* La maggiorazione è una finestra chiusa a destra e aperta a sinistra. */
+    test('detrazioneLavoroDipendente — i 65 € stanno fra 25.000 e 35.000',()=>{
+      const magg=i=>toNumber(M.detrazioneLavoroDipendente(dec(i)).maggiorazione);
+      assert.equal(magg('25000'),0);
+      assert.equal(magg('25000.01'),65);
+      assert.equal(magg('35000'),65);
+      assert.equal(magg('35000.01'),0);
+    });
+
+    /* L. 207/2024 c. 6: piena fra 20.000 e 32.000, poi si consuma
+       linearmente fino a 40.000, dove vale zero. */
+    test('ulterioreDetrazione — piena, poi decrescente, poi niente',()=>{
+      const sp=i=>num(M.ulterioreDetrazione(dec(i)).spettante);
+      assert.equal(sp('20000'),0);
+      assert.equal(sp('20000.01'),1000);
+      assert.equal(sp('32000'),1000);
+      assert.equal(sp('36000'),500);      // 1.000 × (40.000 − 36.000) ÷ 8.000
+      assert.equal(sp('40000'),0);
+      assert.equal(sp('45000'),0);
+    });
+  });
+
+  /* La capienza è il passo che prima non aveva un nome: tre righe
+     sciolte dentro calcola(). Qui si esercita con numeri inventati,
+     senza RAL, senza aliquote e senza scaglioni. */
+  test.describe('applicaCapienza',()=>{
+    test('capiente — le detrazioni entrano intere e resta IRPEF netta',()=>{
+      const {usi,residua}=M.applicaCapienza(dec('7688.56'),[dec('1646.48'),dec('1000')]);
+      assert.deepEqual(usi.map(num),[1646.48,1000]);
+      assert.equal(num(residua),5042.08);
+    });
+
+    test('incapiente — non si rimborsa, e la residua è zero',()=>{
+      const {usi,residua}=M.applicaCapienza(dec('400'),[dec('1955'),dec('0')]);
+      assert.deepEqual(usi.map(num),[400,0]);
+      assert.equal(num(residua),0);
+      const azero=M.applicaCapienza(dec('0'),[dec('1955'),dec('1000')]);
+      assert.deepEqual(azero.usi.map(num),[0,0]);
+      assert.equal(num(azero.residua),0);
+    });
+
+    /* L'ordine di consumo è la ragione per cui questo passo ha un nome.
+       A 1.200 € di imposta, con 1.000 e 1.955 da consumare, chi va per
+       primo prende tutto quello che gli spetta e lascia il resto. */
+    test('l\'ordine dell\'array è l\'ordine di consumo',()=>{
+      const prima1000=M.applicaCapienza(dec('1200'),[dec('1000'),dec('1955')]);
+      assert.deepEqual(prima1000.usi.map(num),[1000,200]);
+      const prima1955=M.applicaCapienza(dec('1200'),[dec('1955'),dec('1000')]);
+      assert.deepEqual(prima1955.usi.map(num),[1200,0]);
+    });
+  });
+
+  test.describe('addizionali locali',()=>{
+    /* Progressive come l'IRPEF, ma dovute solo se resta imposta da pagare. */
+    test('addizionaleRegionale — per scaglioni, e solo se dovuta',()=>{
+      // 15.000 × 1,23% + 13.000 × 1,58% + 3.783,50 × 1,72%
+      assert.equal(num(M.addizionaleRegionale(dec('31783.50'),true)),454.98);
+      assert.equal(num(M.addizionaleRegionale(dec('15000'),true)),184.50);
+      assert.equal(num(M.addizionaleRegionale(dec('31783.50'),false)),0);
+    });
+
+    /* Esenzione secca, non franchigia: un centesimo sopra i 23.000 €
+       si paga lo 0,8% sull'INTERO imponibile, non sull'eccedenza. */
+    test('addizionaleComunale — l\'esenzione è secca, non una franchigia',()=>{
+      assert.equal(num(M.addizionaleComunale(dec('23000'),true)),0);
+      assert.equal(num(M.addizionaleComunale(dec('23000.01'),true)),184.00);
+      assert.notEqual(num(M.addizionaleComunale(dec('23000.01'),true)),0);
+      assert.equal(num(M.addizionaleComunale(dec('31783.50'),true)),254.27);
+      assert.equal(num(M.addizionaleComunale(dec('31783.50'),false)),0);
+    });
+  });
+
+  test.describe('integrazioni di legge',()=>{
+    /* Il cuneo: tre aliquote a gradino, non interpolate. */
+    test('sommaNonImponibile — 7,1 / 5,3 / 4,8 fino a 20.000',()=>{
+      assert.equal(toNumber(M.sommaNonImponibile(dec('8500')).aliquota),0.071);
+      assert.equal(num(M.sommaNonImponibile(dec('8500')).importo),603.50);
+      assert.equal(toNumber(M.sommaNonImponibile(dec('8500.01')).aliquota),0.053);
+      assert.equal(num(M.sommaNonImponibile(dec('15000')).importo),795);
+      assert.equal(toNumber(M.sommaNonImponibile(dec('20000')).aliquota),0.048);
+      assert.equal(num(M.sommaNonImponibile(dec('20000')).importo),960);
+      assert.equal(M.sommaNonImponibile(dec('20000.01')).aliquota,null);
+      assert.equal(num(M.sommaNonImponibile(dec('20000.01')).importo),0);
+    });
+
+    /* D.L. 3/2020: sotto i 15.000 € di imponibile, e solo se l'IRPEF
+       lorda SUPERA la detrazione diminuita di 75 €. Il confronto è
+       stretto: a parità esatta non spetta. */
+    test('trattamentoIntegrativo — la condizione sulla detrazione − 75',()=>{
+      const ti=(i,l,d)=>num(M.trattamentoIntegrativo(dec(i),dec(l),dec(d)));
+      assert.equal(ti('15000','1900','1955'),1200);   // 1.900 > 1.880
+      assert.equal(ti('15000','1880','1955'),0);      // pari, non maggiore
+      assert.equal(ti('15000','1000','1955'),0);      // 1.000 < 1.880
+      assert.equal(ti('15000.01','5000','1955'),0);   // fuori dal limite
+    });
+  });
+
+  /* La guardia. Verifica UNA somma: se ne arriverà una seconda —
+     il costo azienda — questa continuerà a guardare la sua. */
+  test.describe('riconcilia',()=>{
+    const v=(tipo,importo,somma=M.NETTO_LAVORATORE)=>({tipo,somma,_i:dec(importo)});
+
+    test('i conti tornano sulla somma chiesta',()=>{
+      const r=M.riconcilia(dec('1000'),[v('contributo','-100'),v('imposta','-50'),
+        v('integrazione','20')]);
+      assert.equal(num(r.netto),870);
+      assert.equal(r.voci,3);
+      assert.ok(r.verificata);
+    });
+
+    test('una voce con un tipo fuori dall\'identità la rompe',()=>{
+      const r=M.riconcilia(dec('1000'),[v('contributo','-100'),v('mancia','-50')]);
+      assert.equal(num(r.netto),850);
+      assert.ok(!r.verificata);
+    });
+
+    test('una voce che non dichiara una somma nota la rompe',()=>{
+      const senza={tipo:'imposta',_i:dec('-50')};
+      assert.ok(!M.riconcilia(dec('1000'),[v('contributo','-100'),senza]).verificata);
+      const altra=v('imposta','-50','costoAzienda');
+      assert.ok(!M.riconcilia(dec('1000'),[v('contributo','-100'),altra]).verificata);
+    });
+
+    test('senza voci non c\'è niente da riconciliare',()=>{
+      assert.ok(!M.riconcilia(dec('1000'),[]).verificata);
+    });
+  });
+
+  /* Ogni voce emessa da calcola() dichiara la somma in cui entra:
+     è il campo su cui la guardia filtra. */
+  test('ogni voce porta somma: nettoLavoratore',()=>{
+    for(const ral of ['0','9000','20000','35000','60000','200000'])
+      for(const voce of calcola(ral,13).voci)
+        assert.equal(voce.somma,M.NETTO_LAVORATORE,`${ral} → ${voce.id}`);
   });
 });
