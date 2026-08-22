@@ -13,9 +13,19 @@ Node 18 o successivo. Nessuna dipendenza, nessun `package.json`, niente da insta
 Il motore (`prototipo/motore.js`) è uno script classico: la stessa riga di codice
 gira nella pagina aperta con un doppio clic e in Node, senza duplicati.
 
-Stato al 13 agosto 2026: **32 prove, tutte verdi** (Node v22.22.2).
+Stato al 22 agosto 2026: **54 prove, tutte verdi** (Node v22.22.2).
 
-## Le tre categorie, e perché stanno separate
+Gli attrezzi di verifica stanno in `processo/attrezzi/`, e girano anche loro senza
+dipendenze:
+
+```
+node processo/attrezzi/confronto.js salva base.json      # fotografa 2.001 corse
+node processo/attrezzi/confronto.js confronta base.json  # le riesegue e le confronta
+node processo/attrezzi/mutazioni.js                      # rompe una voce alla volta
+node processo/attrezzi/frasi.js base.json                # le frasi della pagina
+```
+
+## Le quattro categorie, e perché stanno separate
 
 Due prove che sembrano prove e non lo sono:
 
@@ -27,13 +37,17 @@ Due prove che sembrano prove e non lo sono:
   sbagliasse oggi, congelerebbe l'errore e ci metterebbe un test verde a guardia.
 
 La correttezza può venire da un posto solo: il confronto a mano con la norma. Costa,
-quindi si fa in pochi punti scelti. Da qui le tre categorie, etichettate nel file di test.
+quindi si fa in pochi punti scelti. Da qui le categorie, etichettate nel file di test.
+Le prime tre nascono con il [#6](https://github.com/ricca91/jethr-riccardosartori/issues/6);
+la quarta con il [#15](https://github.com/ricca91/jethr-riccardosartori/issues/15), quando
+il motore si spezza in voci che si possono esercitare una alla volta.
 
 | | Categoria | Che cosa prova | Come |
 |---|---|---|---|
 | **A** | Correttezza | che il numero è giusto | poche ancore, derivate a mano dalla norma e scritte per esteso nei commenti |
 | **B** | Comportamento ai limiti | che le discontinuità di legge ci sono tutte, con la causa giusta | i sette salti e i quattro cambi di pendenza, presi a un centesimo di distanza, più gli input estremi |
 | **C** | Non-regressione | che nessuno ha cambiato niente | 2.001 campioni a passo di 100 € da 0 a 200.000 €, più il golden |
+| **D** | Le voci da sole | che una voce sbagliata si vede *dove* è sbagliata | ogni funzione del contratto esercitata a un imponibile scelto, con soli numeri |
 
 ### A — le ancore verificate a mano
 
@@ -65,6 +79,115 @@ L'invariante di monotonicità è formulato in modo da non bocciare il motore giu
 legge. Un test così boccerebbe l'implementazione corretta, e la reazione naturale sarebbe
 "aggiustare" un motore che funziona.
 
+### D — ogni voce esercitata da sola
+
+Fino al [#15](https://github.com/ricca91/jethr-riccardosartori/issues/15) il motore era
+un blocco unico: ogni prova passava da `calcola(RAL)`. Per esercitare la detrazione
+dell'art. 13 a 31.783,50 € di imponibile bisognava trovare la RAL che quell'imponibile
+lo produce — e quando una prova diventava rossa diceva *che* qualcosa si era rotto, non
+*dove*.
+
+Adesso ogni voce ha la sua funzione e la sua prova: `contributiIvs`,
+`contributoAggiuntivo`, `imponibile`, `irpefLorda`, `detrazioneLavoroDipendente`,
+`ulterioreDetrazione`, `applicaCapienza`, `addizionaleRegionale`,
+`addizionaleComunale`, `sommaNonImponibile`, `trattamentoIntegrativo`, `riconcilia`.
+Entrano numeri, escono numeri.
+
+### La proprietà è verificata, non asserita
+
+«Ogni voce ha una prova che la esercita da sola» è facile da scrivere e difficile da
+credere: una prova può esistere, girare verde e non guardare niente. L'unico modo di
+saperlo è romperla.
+
+`processo/attrezzi/mutazioni.js` rompe una voce alla volta — un carattere nel motore, su
+una copia usa e getta — e guarda quale prova si accende rossa. **Quindici rotture, quindici
+colte dalla prova della loro voce.**
+
+| Si rompe | Che cosa | Chi si accende in D | A · B · C |
+|---|---|---|---|
+| `contributiIvs` | 9,19% → 9,20% | la sua, e `imponibile` | 4 · 9 · 2 |
+| `contributoAggiuntivo` | 1% → 2% | la sua, e `imponibile` | 1 · 1 · 1 |
+| `imponibile` | un euro in più | la sua | 4 · 8 · 2 |
+| `irpefLorda` | aliquota sull'intero, non sulla quota | la sua, e `addizionaleRegionale` | 1 · 2 · 4 |
+| `detrazioneLavoroDipendente` | il rapporto non si tronca più | la sua | 2 · 3 · 2 |
+| `detrazioneLavoroDipendente` | i 65 € partono un centesimo prima | la sua | 0 · 2 · 0 |
+| `ulterioreDetrazione` | 1.000 → 900 | la sua | 1 · 2 · 2 |
+| `applicaCapienza` | la detrazione entra intera | la sua, e quella sull'ordine | 2 · 0 · 1 |
+| `applicaCapienza` | si consuma la più grande per prima | la sua | **0 · 0 · 0** |
+| `addizionaleRegionale` | dovuta anche a IRPEF netta zero | la sua | 0 · 2 · 1 |
+| `addizionaleComunale` | esenzione secca → franchigia | la sua | 2 · 2 · 2 |
+| `sommaNonImponibile` | 7,1% → 6,1% | la sua | 0 · 2 · 1 |
+| `trattamentoIntegrativo` | 1.200 → 1.300 | la sua | 0 · 3 · 1 |
+| `riconcilia` | l'identità per tipo non si controlla | la sua | **0 · 0 · 0** |
+| `sommeDichiarate` | la somma dichiarata non si controlla | la sua | **0 · 0 · 0** |
+
+Due cose che questa tabella dice, e che prima non si sapevano.
+
+**L'accoppiamento è reale e va guardato in faccia.** Rompere il 9,19% accende anche la
+prova di `imponibile`, perché l'imponibile è la RAL meno i contributi. Non è un difetto
+delle prove: è la catena del calcolo che si vede. Quello che conta è che la prova della
+voce rotta cade *sempre*, e che le altre che cadono con lei stanno a valle.
+
+**Tre mutazioni le prende solo la categoria D** — le tre in grassetto. Cambiare l'ordine
+di consumo delle detrazioni non muove un centesimo del netto in nessuna delle 2.001
+corse, perché il totale consumato è lo stesso; e le due guardie interne di `riconcilia`
+non hanno effetto su nessun risultato finché nessuna voce è malformata. Prima del #15
+queste tre rotture sarebbero passate con tutta la matrice verde.
+
+### Il mutante che non può parlare
+
+Una sedicesima mutazione sta nell'elenco con un'etichetta diversa: **equivalente**. Il
+trattamento integrativo riceve la detrazione dell'art. 13 *senza* la maggiorazione di
+65 €. Scambiarla con il totale non cambia niente in nessuna corsa — e non per fortuna:
+il terzo argomento viene letto solo sotto i 15.000 € di imponibile, e lì la maggiorazione
+è sempre zero, perché parte da 25.000.
+
+Nessuna prova può distinguere le due letture, e scriverne una sarebbe fingere. Ma è
+proprio questo il motivo per cui il motore passa la detrazione senza maggiorazione: la
+distanza fra due soglie di `K` è una coincidenza aritmetica, non una regola del D.L.
+3/2020. Se un domani la maggiorazione scendesse sotto i 15.000 €, la versione «totale»
+comincerebbe a sbagliare in silenzio.
+
+Per queste mutazioni l'attrezzo rovescia la domanda: pretende che **tutto resti verde**.
+Se qualcosa si accende, l'equivalenza dichiarata era falsa. È il modo di scrivere nero su
+bianco «qui non c'è copertura, e so perché» invece di lasciare un buco che sembra una
+svista.
+
+*(Un fatto collegato, trovato scrivendo la tabella: nella fascia dove l'ulteriore
+detrazione esiste — imponibile sopra 20.000 € — l'IRPEF lorda è sempre capiente, quindi
+oggi l'ordine di consumo non è osservabile dal netto. `applicaCapienza` lo rispetta
+comunque, ed è provato; ma è una garanzia sulla funzione, non un fatto misurabile a
+schermo. Meglio scritto che scoperto dal prossimo che ci mette le mani.)*
+
+## Il refactor del #15: come si prova che non ha spostato niente
+
+Il #15 è un prefactor: nessun numero cambia. La garanzia sta in tre controlli, non in
+una dichiarazione.
+
+**Il confronto a tappeto.** 2.001 corse salvate prima del refactor con
+`processo/attrezzi/confronto.js`, rieseguite dopo, confrontate **campo per campo**
+sull'oggetto intero — `kpi`, `imponibile`, `irpefNetta`, `integrazioni`,
+`aliquotaContributivaEffettiva`, `riconciliazione` e l'ordine delle voci: **zero
+divergenze**. L'attrezzo è stato provato anche al contrario, seminando un errore di un
+decimillesimo nell'addizionale comunale: 1.747 corse rosse su 2.001. Un attrezzo che non
+sa fallire non prova niente.
+
+Il confronto guarda i campi che stanno nella base. Due campi — `et` e `formula` — sono
+usciti dal motore per disegno, e vanno dichiarati all'invocazione con
+`--esclude et,formula`: la divergenza è una scelta, e sta scritta nel comando invece che
+nascosta dentro l'attrezzo. I campi *nuovi* vengono elencati a parte, perché non hanno
+un prima con cui divergere.
+
+**Le frasi.** Escludendo `et` e `formula` resta scoperto proprio ciò che il #15 sposta:
+le parole a schermo. `processo/attrezzi/frasi.js` estrae il blocco `RIGHE` da
+`index.html`, lo esegue con le costanti del motore e ricompone titolo e formula di ogni
+voce di ogni corsa, confrontandoli con quelli che il motore scriveva prima: **23.916
+frasi, tutte identiche**.
+
+**La pagina vera.** Aperta a fianco della versione precedente e guidata dallo stesso
+copione — la catena intera e i pannelli di dettaglio a RAL 35.000: stesso testo, stessi
+importi, nessun errore in console.
+
 ## La convenzione di arrotondamento
 
 Il contratto impone due cose: troncamento alle prime **quattro cifre decimali** sui
@@ -82,7 +205,7 @@ Per la stessa ragione i valori attesi dei test si **rigenerano dal motore** e no
 ricopiano dai documenti a monte. Sei delle sette soglie cadono uno o due centesimi più
 in alto delle posizioni annotate durante la ricerca.
 
-## L'estrazione del motore
+## L'estrazione del motore (#9)
 
 Il motore è stato tolto dalla pagina e messo in un file a parte per poterlo provare fuori
 dal browser. Per escludere che l'operazione avesse spostato un centesimo, la versione

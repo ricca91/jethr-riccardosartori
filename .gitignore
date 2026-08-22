@@ -1,0 +1,5 @@
+# La fotografia delle 2.001 corse che processo/attrezzi/confronto.js salva prima
+# di un refactor: è un file usa e getta, si rigenera in un secondo e pesa qualche
+# megabyte. Non entra nella storia della repo.
+*.corse.json
+base.json

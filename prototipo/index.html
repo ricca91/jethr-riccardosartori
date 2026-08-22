@@ -1454,6 +1454,129 @@ function sankey(res,h,fs){
     meno imposte ${eur(tx)}${ig>0?`, più integrazioni di legge ${eur(ig)}`:''}, netto annuo ${eur(ne)}.</p>`;
 }
 
+/* ============================================================
+   RIGHE — dal numero alla frase.
+
+   Il motore emette una VOCE: importo, base, tipo, fonte, e i
+   numeri che sono entrati nel conto. Titolo e formula nascono
+   qui, perché sono disegno e non calcolo — è la distinzione fra
+   «voce» e «riga» del glossario in CONTEXT.md.
+
+   Nessun letterale fiscale in questo blocco: soglie e aliquote
+   arrivano da `K`, esportata dal motore. Se una soglia cambia,
+   cambia in un posto solo e la frase la segue.
+   ============================================================ */
+/* RIGHE-INIZIO */
+/* L'impalcatura sta in inglese, come `fmt`, `eur` e `grp`: serve a
+   far funzionare la macchina, non a descrivere una norma. */
+const noCents=n=>fmt(n).replace(',00','');
+const pct=(n,d)=>(n*100).toFixed(d).replace('.',',')+'%';
+const toThousands=b=>toNumber(b)/1000;
+
+/* Capienza: le detrazioni abbattono l'imposta, non sono
+   rimborsabili. La nota compare su TUTTE le detrazioni appena una
+   di esse non entra intera — è un vincolo sul totale, non su una
+   voce sola. */
+function capienza(v,voci){
+  const detrazioni=voci.filter(x=>x.tipo==='detrazione');
+  if(detrazioni.every(x=>x.capiente))return '';
+  return `  →  spettante ${fmt(v.spettante)} €,`+
+    `  ⚠ capienza: usata ${fmt(v.importo)} € — le detrazioni non sono rimborsabili`;
+}
+
+/* Una riga per voce, titolo e formula accanto: aggiungere una voce
+   è una sola aggiunta qui, non una in un elenco di titoli più una
+   in un ramo di formula. */
+const RIGHE={
+  ivs:{
+    titolo:()=>'Contributi previdenziali IVS',
+    formula:v=>`${fmt(v.base)} × ${pct(v.aliquota,2)}`,
+  },
+  ecc:{
+    titolo:v=>`Contributo aggiuntivo ${pct(v.aliquota,0)}`,
+    formula:v=>`(${fmt(v.baseContributiva)} − ${fmt(v.soglia)}) × ${pct(v.aliquota,0)}`,
+  },
+  lorda:{
+    titolo:()=>'IRPEF lorda',
+    formula:v=>{
+      const sc=K.irpef.scaglioni,al=i=>pct(toNumber(sc[i][1]),0);
+      return `${al(0)} × min(${fmt(v.base)}; ${noCents(toNumber(sc[0][0]))}) `+
+             `+ ${al(1)} sulla quota ${toThousands(sc[0][0])}–${toThousands(sc[1][0])}k `+
+             `+ ${al(2)} oltre`;
+    },
+  },
+  detrlav:{
+    titolo:v=>'Detrazione lavoro dipendente'+
+      (v.maggiorazione>0?` (+${noCents(v.maggiorazione)} €)`:''),
+    formula:(v,voci)=>{
+      const D=K.detrazioneLavoro;
+      let f;
+      if(v.base<=toNumber(D.sogliaFissa))
+        f=`${fmt(v.quotaFissa)} (fisso fino a ${noCents(toNumber(D.sogliaFissa))} €)`;
+      else if(v.base<=toNumber(D.sogliaIntermedia))
+        f=`${noCents(v.quotaFissa)} + ${noCents(v.quotaVariabile)} × ${v.rapporto.toFixed(4)}`;
+      else if(v.base<=toNumber(D.sogliaFinale))
+        f=`${noCents(v.quotaVariabile)} × ${v.rapporto.toFixed(4)}`+
+          `  (rapporto troncato a 4 decimali)`;
+      else f=`0 (imponibile oltre ${noCents(toNumber(D.sogliaFinale))} €)`;
+      if(v.maggiorazione>0)
+        f+=`  +${noCents(v.maggiorazione)} (imponibile `+
+           `${toThousands(D.maggiorazioneDa)}–${toThousands(D.maggiorazioneA)}k)`;
+      return f+capienza(v,voci);
+    },
+  },
+  detrult:{
+    titolo:()=>'Ulteriore detrazione',
+    formula:(v,voci)=>{
+      const U=K.ulterioreDetrazione;
+      const f=v.rapporto===null
+        ? `${fmt(v.quotaFissa)} (imponibile ${toThousands(U.da)}–${toThousands(U.pienoFinoA)}k)`
+        : `${noCents(v.quotaFissa)} × (${noCents(toNumber(U.a))} − ${fmt(v.base)}) `+
+          `÷ ${noCents(toNumber(U.ampiezzaDecrescente))}`;
+      return f+capienza(v,voci);
+    },
+  },
+  addreg:{
+    titolo:()=>'Addizionale regionale Lombardia',
+    formula:v=>{
+      if(!v.dovuta)return '0 — non dovuta: IRPEF netta è zero';
+      const sc=K.regionale.scaglioni;
+      return sc.map(([tetto,aliquota],i)=>{
+        const al=pct(toNumber(aliquota),2);
+        if(tetto===null)return `${al} oltre`;
+        return i===0?`${al} fino a ${toThousands(tetto)}k`
+                    :`${al} ${toThousands(sc[i-1][0])}–${toThousands(tetto)}k`;
+      }).join(' · ');
+    },
+  },
+  addcom:{
+    titolo:()=>'Addizionale comunale Milano',
+    formula:v=>{
+      if(!v.dovuta)return '0 — non dovuta: IRPEF netta è zero';
+      const esente=toNumber(K.comunale.esenzioneFinoA);
+      return v.base>esente
+        ? `${fmt(v.base)} × ${pct(v.aliquota,1)} (sull'intero imponibile)`
+        : `0 — esente fino a ${noCents(esente)} € di imponibile`;
+    },
+  },
+  somma:{
+    titolo:()=>'Somma non imponibile (cuneo)',
+    formula:v=>`${fmt(v.base)} × ${pct(v.aliquota,1)}`,
+  },
+  ti:{
+    titolo:()=>'Trattamento integrativo',
+    formula:v=>{
+      const T=K.trattamentoIntegrativo;
+      return `${fmt(v.quotaFissa)} — imponibile ≤ ${noCents(toNumber(T.limiteImponibile))} `+
+             `e IRPEF lorda > detrazione − ${noCents(toNumber(T.scartoDetrazione))}`;
+    },
+  },
+};
+
+const titolo=v=>RIGHE[v.id].titolo(v);
+const formula=(v,voci)=>RIGHE[v.id].formula(v,voci);
+/* RIGHE-FINE */
+
 /* ---- dettaglio: catena a operatori firmati + pannello della voce scelta ---- */
 function chain(res,st){
   const v=id=>res.voci.find(x=>x.id===id);
@@ -1469,29 +1592,30 @@ function chain(res,st){
       ${voce?`data-voce="${voce.id}"`:''}><td class="op">${op}</td><td>${nm}</td>
       <td class="amt">${eur(Math.abs(val))}</td></tr>`);
   };
+  const rigaVoce=(op,id)=>{const x=v(id);if(x)row(op,titolo(x),x.importo,x);};
   grp('Dalla RAL all\'imponibile');
   row('','RAL',res.input.ral,null);
-  row('−',v('ivs').et,v('ivs').importo,v('ivs'));
-  if(v('ecc'))row('−',v('ecc').et,v('ecc').importo,v('ecc'));
+  rigaVoce('−','ivs');
+  rigaVoce('−','ecc');
   row('=','Imponibile IRPEF',res.imponibile,null,'sub');
   grp('IRPEF');
-  row('−',v('lorda').et,v('lorda').importo,v('lorda'));
-  row('+',v('detrlav').et,v('detrlav').importo,v('detrlav'));
-  if(v('detrult'))row('+',v('detrult').et,v('detrult').importo,v('detrult'));
+  rigaVoce('−','lorda');
+  rigaVoce('+','detrlav');
+  rigaVoce('+','detrult');
   row('=','IRPEF netta',res.irpefNetta,null,'sub');
   grp('Addizionali locali');
-  row('−',v('addreg').et,v('addreg').importo,v('addreg'));
-  row('−',v('addcom').et,v('addcom').importo,v('addcom'));
+  rigaVoce('−','addreg');
+  rigaVoce('−','addcom');
   if(v('somma')||v('ti')){grp('Integrazioni di legge');
-    if(v('somma'))row('+',v('somma').et,v('somma').importo,v('somma'));
-    if(v('ti'))row('+',v('ti').et,v('ti').importo,v('ti'));}
+    rigaVoce('+','somma');
+    rigaVoce('+','ti');}
   rows.push(`<tr class="tot"><td class="op">=</td><td>Netto annuo</td>
     <td class="amt">${eur(res.kpi.nettoAnnuo)}</td></tr>`);
   const sel=st.aperta?res.voci.find(x=>x.id===st.aperta):null;
   const pane=sel?(()=>{const[t,d,u]=FONTI[sel.fonte];
-    return `<h4>${esc(sel.et)}</h4>
+    return `<h4>${esc(titolo(sel))}</h4>
       <div class="jet-body-s jet-muted" style="margin-bottom:2px">${esc(sel.tipo)} · base ${eur(sel.base)}</div>
-      <code>${esc(sel.formula||'—')}</code>
+      <code>${esc(formula(sel,res.voci)||'—')}</code>
       <div class="jet-body-s"><b>${eur(Math.abs(sel.importo))}</b></div>
       <hr class="jet-divider" style="margin:14px 0">
       <div class="jet-body-xs jet-muted">Fonte</div>
