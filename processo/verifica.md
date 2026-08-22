@@ -13,7 +13,7 @@ Node 18 o successivo. Nessuna dipendenza, nessun `package.json`, niente da insta
 Il motore (`prototipo/motore.js`) è uno script classico: la stessa riga di codice
 gira nella pagina aperta con un doppio clic e in Node, senza duplicati.
 
-Stato al 22 agosto 2026: **52 prove, tutte verdi** (Node v22.22.2).
+Stato al 22 agosto 2026: **54 prove, tutte verdi** (Node v22.22.2).
 
 Gli attrezzi di verifica stanno in `processo/attrezzi/`, e girano anche loro senza
 dipendenze:
@@ -100,8 +100,8 @@ credere: una prova può esistere, girare verde e non guardare niente. L'unico mo
 saperlo è romperla.
 
 `processo/attrezzi/mutazioni.js` rompe una voce alla volta — un carattere nel motore, su
-una copia usa e getta — e guarda quale prova si accende rossa. **Quindici mutazioni,
-quindici colte dalla prova della loro voce.**
+una copia usa e getta — e guarda quale prova si accende rossa. **Quindici rotture, quindici
+colte dalla prova della loro voce.**
 
 | Si rompe | Che cosa | Chi si accende in D | A · B · C |
 |---|---|---|---|
@@ -119,7 +119,7 @@ quindici colte dalla prova della loro voce.**
 | `sommaNonImponibile` | 7,1% → 6,1% | la sua | 0 · 2 · 1 |
 | `trattamentoIntegrativo` | 1.200 → 1.300 | la sua | 0 · 3 · 1 |
 | `riconcilia` | l'identità per tipo non si controlla | la sua | **0 · 0 · 0** |
-| `riconcilia` | la somma dichiarata non si controlla | la sua | **0 · 0 · 0** |
+| `sommeDichiarate` | la somma dichiarata non si controlla | la sua | **0 · 0 · 0** |
 
 Due cose che questa tabella dice, e che prima non si sapevano.
 
@@ -133,6 +133,25 @@ di consumo delle detrazioni non muove un centesimo del netto in nessuna delle 2.
 corse, perché il totale consumato è lo stesso; e le due guardie interne di `riconcilia`
 non hanno effetto su nessun risultato finché nessuna voce è malformata. Prima del #15
 queste tre rotture sarebbero passate con tutta la matrice verde.
+
+### Il mutante che non può parlare
+
+Una sedicesima mutazione sta nell'elenco con un'etichetta diversa: **equivalente**. Il
+trattamento integrativo riceve la detrazione dell'art. 13 *senza* la maggiorazione di
+65 €. Scambiarla con il totale non cambia niente in nessuna corsa — e non per fortuna:
+il terzo argomento viene letto solo sotto i 15.000 € di imponibile, e lì la maggiorazione
+è sempre zero, perché parte da 25.000.
+
+Nessuna prova può distinguere le due letture, e scriverne una sarebbe fingere. Ma è
+proprio questo il motivo per cui il motore passa la detrazione senza maggiorazione: la
+distanza fra due soglie di `K` è una coincidenza aritmetica, non una regola del D.L.
+3/2020. Se un domani la maggiorazione scendesse sotto i 15.000 €, la versione «totale»
+comincerebbe a sbagliare in silenzio.
+
+Per queste mutazioni l'attrezzo rovescia la domanda: pretende che **tutto resti verde**.
+Se qualcosa si accende, l'equivalenza dichiarata era falsa. È il modo di scrivere nero su
+bianco «qui non c'è copertura, e so perché» invece di lasciare un buco che sembra una
+svista.
 
 *(Un fatto collegato, trovato scrivendo la tabella: nella fascia dove l'ulteriore
 detrazione esiste — imponibile sopra 20.000 € — l'IRPEF lorda è sempre capiente, quindi

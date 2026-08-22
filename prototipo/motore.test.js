@@ -443,6 +443,16 @@ test.describe('D — le voci da sole',()=>{
       assert.equal(magg('35000.01'),0);
     });
 
+    /* La maggiorazione si somma all'art. 13 e resta distinguibile:
+       il trattamento integrativo guarda `articolo13`, non il totale. */
+    test('detrazioneLavoroDipendente — art. 13 e maggiorazione restano separati',()=>{
+      for(const i of ['10000','21500','31783.50','60000']){
+        const d=M.detrazioneLavoroDipendente(dec(i));
+        assert.equal(d.spettante,d.articolo13+d.maggiorazione,`imponibile ${i}`);
+      }
+      assert.equal(num(M.detrazioneLavoroDipendente(dec('31783.50')).articolo13),1581.48);
+    });
+
     /* L. 207/2024 c. 6: piena fra 20.000 e 32.000, poi si consuma
        linearmente fino a 40.000, dove vale zero. */
     test('ulterioreDetrazione — piena, poi decrescente, poi niente',()=>{
@@ -540,7 +550,7 @@ test.describe('D — le voci da sole',()=>{
       const r=M.riconcilia(dec('1000'),[v('contributo','-100'),v('imposta','-50'),
         v('integrazione','20')]);
       assert.equal(num(r.netto),870);
-      assert.equal(r.voci,3);
+      assert.equal(r.quante,3);
       assert.ok(r.verificata);
     });
 
@@ -550,16 +560,34 @@ test.describe('D — le voci da sole',()=>{
       assert.ok(!r.verificata);
     });
 
-    test('una voce che non dichiara una somma nota la rompe',()=>{
-      const senza={tipo:'imposta',_i:dec('-50')};
-      assert.ok(!M.riconcilia(dec('1000'),[v('contributo','-100'),senza]).verificata);
-      const altra=v('imposta','-50','costoAzienda');
-      assert.ok(!M.riconcilia(dec('1000'),[v('contributo','-100'),altra]).verificata);
+    /* «Quella somma, non tutto»: le voci di un'altra somma non
+       entrano nel conto e non lo rompono, nemmeno se sono malfatte.
+       È la proprietà che permetterà al costo azienda di esistere
+       senza toccare la riconciliazione del netto. */
+    test('le voci di un\'altra somma restano fuori',()=>{
+      const r=M.riconcilia(dec('1000'),
+        [v('contributo','-100'),v('imposta','-50','costoAzienda')]);
+      assert.equal(num(r.netto),900);
+      assert.equal(r.quante,1);
+      assert.ok(r.verificata);
+      const conMalfatta=M.riconcilia(dec('1000'),
+        [v('contributo','-100'),v('mancia','-50','costoAzienda')]);
+      assert.ok(conMalfatta.verificata);
     });
 
     test('senza voci non c\'è niente da riconciliare',()=>{
       assert.ok(!M.riconcilia(dec('1000'),[]).verificata);
     });
+  });
+
+  /* La domanda che riconcilia() non fa, perché non è sulla singola
+     somma: ogni voce ne dichiara una nota? Una che non lo fa
+     sparirebbe da tutte le riconciliazioni, in silenzio. */
+  test('sommeDichiarate — la voce orfana si vede',()=>{
+    const v=(tipo,somma)=>({tipo,somma,_i:dec('-50')});
+    assert.ok(M.sommeDichiarate([v('imposta',M.NETTO_LAVORATORE)]));
+    assert.ok(!M.sommeDichiarate([{tipo:'imposta',_i:dec('-50')}]));
+    assert.ok(!M.sommeDichiarate([v('imposta','costoAzienda')]));
   });
 
   /* Ogni voce emessa da calcola() dichiara la somma in cui entra:

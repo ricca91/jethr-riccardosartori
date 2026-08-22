@@ -1467,26 +1467,11 @@ function sankey(res,h,fs){
    cambia in un posto solo e la frase la segue.
    ============================================================ */
 /* RIGHE-INIZIO */
-const mila=n=>fmt(n).replace(',00','');
-const perc=(n,d)=>(n*100).toFixed(d).replace('.',',')+'%';
-const kk=b=>toNumber(b)/1000;
-
-const TITOLI={
-  ivs:'Contributi previdenziali IVS',
-  lorda:'IRPEF lorda',
-  detrlav:'Detrazione lavoro dipendente',
-  detrult:'Ulteriore detrazione',
-  addreg:'Addizionale regionale Lombardia',
-  addcom:'Addizionale comunale Milano',
-  somma:'Somma non imponibile (cuneo)',
-  ti:'Trattamento integrativo',
-};
-function titolo(v){
-  if(v.id==='ecc')return `Contributo aggiuntivo ${perc(v.aliquota,0)}`;
-  if(v.id==='detrlav'&&v.maggiorazione>0)
-    return `${TITOLI.detrlav} (+${mila(v.maggiorazione)} €)`;
-  return TITOLI[v.id];
-}
+/* L'impalcatura sta in inglese, come `fmt`, `eur` e `grp`: serve a
+   far funzionare la macchina, non a descrivere una norma. */
+const noCents=n=>fmt(n).replace(',00','');
+const pct=(n,d)=>(n*100).toFixed(d).replace('.',',')+'%';
+const toThousands=b=>toNumber(b)/1000;
 
 /* Capienza: le detrazioni abbattono l'imposta, non sono
    rimborsabili. La nota compare su TUTTE le detrazioni appena una
@@ -1499,63 +1484,97 @@ function capienza(v,voci){
     `  ⚠ capienza: usata ${fmt(v.importo)} € — le detrazioni non sono rimborsabili`;
 }
 
-function formula(v,voci){
-  const D=K.detrazioneLavoro,U=K.ulterioreDetrazione,T=K.trattamentoIntegrativo;
-  switch(v.id){
-    case 'ivs':
-      return `${fmt(v.base)} × ${perc(v.aliquota,2)}`;
-    case 'ecc':
-      return `(${fmt(v.baseContributiva)} − ${fmt(v.soglia)}) × ${perc(v.aliquota,0)}`;
-    case 'lorda':{
-      const sc=K.irpef.scaglioni;
-      const al=i=>perc(toNumber(sc[i][1]),0);
-      return `${al(0)} × min(${fmt(v.base)}; ${mila(kk(sc[0][0])*1000)}) `+
-             `+ ${al(1)} sulla quota ${kk(sc[0][0])}–${kk(sc[1][0])}k + ${al(2)} oltre`;
-    }
-    case 'detrlav':{
+/* Una riga per voce, titolo e formula accanto: aggiungere una voce
+   è una sola aggiunta qui, non una in un elenco di titoli più una
+   in un ramo di formula. */
+const RIGHE={
+  ivs:{
+    titolo:()=>'Contributi previdenziali IVS',
+    formula:v=>`${fmt(v.base)} × ${pct(v.aliquota,2)}`,
+  },
+  ecc:{
+    titolo:v=>`Contributo aggiuntivo ${pct(v.aliquota,0)}`,
+    formula:v=>`(${fmt(v.baseContributiva)} − ${fmt(v.soglia)}) × ${pct(v.aliquota,0)}`,
+  },
+  lorda:{
+    titolo:()=>'IRPEF lorda',
+    formula:v=>{
+      const sc=K.irpef.scaglioni,al=i=>pct(toNumber(sc[i][1]),0);
+      return `${al(0)} × min(${fmt(v.base)}; ${noCents(toNumber(sc[0][0]))}) `+
+             `+ ${al(1)} sulla quota ${toThousands(sc[0][0])}–${toThousands(sc[1][0])}k `+
+             `+ ${al(2)} oltre`;
+    },
+  },
+  detrlav:{
+    titolo:v=>'Detrazione lavoro dipendente'+
+      (v.maggiorazione>0?` (+${noCents(v.maggiorazione)} €)`:''),
+    formula:(v,voci)=>{
+      const D=K.detrazioneLavoro;
       let f;
-      if(v.base<=kk(D.sogliaFissa)*1000)
-        f=`${fmt(v.quotaFissa)} (fisso fino a ${mila(toNumber(D.sogliaFissa))} €)`;
+      if(v.base<=toNumber(D.sogliaFissa))
+        f=`${fmt(v.quotaFissa)} (fisso fino a ${noCents(toNumber(D.sogliaFissa))} €)`;
       else if(v.base<=toNumber(D.sogliaIntermedia))
-        f=`${mila(v.quotaFissa)} + ${mila(v.quotaVariabile)} × ${v.rapporto.toFixed(4)}`;
+        f=`${noCents(v.quotaFissa)} + ${noCents(v.quotaVariabile)} × ${v.rapporto.toFixed(4)}`;
       else if(v.base<=toNumber(D.sogliaFinale))
-        f=`${mila(v.quotaVariabile)} × ${v.rapporto.toFixed(4)}`+
+        f=`${noCents(v.quotaVariabile)} × ${v.rapporto.toFixed(4)}`+
           `  (rapporto troncato a 4 decimali)`;
-      else f=`0 (imponibile oltre ${mila(toNumber(D.sogliaFinale))} €)`;
+      else f=`0 (imponibile oltre ${noCents(toNumber(D.sogliaFinale))} €)`;
       if(v.maggiorazione>0)
-        f+=`  +${mila(v.maggiorazione)} (imponibile ${kk(D.maggiorazioneDa)}–${kk(D.maggiorazioneA)}k)`;
+        f+=`  +${noCents(v.maggiorazione)} (imponibile `+
+           `${toThousands(D.maggiorazioneDa)}–${toThousands(D.maggiorazioneA)}k)`;
       return f+capienza(v,voci);
-    }
-    case 'detrult':{
+    },
+  },
+  detrult:{
+    titolo:()=>'Ulteriore detrazione',
+    formula:(v,voci)=>{
+      const U=K.ulterioreDetrazione;
       const f=v.rapporto===null
-        ? `${fmt(v.quotaFissa)} (imponibile ${kk(U.da)}–${kk(U.pienoFinoA)}k)`
-        : `${mila(v.quotaFissa)} × (${mila(toNumber(U.a))} − ${fmt(v.base)}) `+
-          `÷ ${mila(toNumber(U.ampiezzaDecrescente))}`;
+        ? `${fmt(v.quotaFissa)} (imponibile ${toThousands(U.da)}–${toThousands(U.pienoFinoA)}k)`
+        : `${noCents(v.quotaFissa)} × (${noCents(toNumber(U.a))} − ${fmt(v.base)}) `+
+          `÷ ${noCents(toNumber(U.ampiezzaDecrescente))}`;
       return f+capienza(v,voci);
-    }
-    case 'addreg':{
+    },
+  },
+  addreg:{
+    titolo:()=>'Addizionale regionale Lombardia',
+    formula:v=>{
       if(!v.dovuta)return '0 — non dovuta: IRPEF netta è zero';
       const sc=K.regionale.scaglioni;
       return sc.map(([tetto,aliquota],i)=>{
-        const al=perc(toNumber(aliquota),2);
+        const al=pct(toNumber(aliquota),2);
         if(tetto===null)return `${al} oltre`;
-        return i===0?`${al} fino a ${kk(tetto)}k`:`${al} ${kk(sc[i-1][0])}–${kk(tetto)}k`;
+        return i===0?`${al} fino a ${toThousands(tetto)}k`
+                    :`${al} ${toThousands(sc[i-1][0])}–${toThousands(tetto)}k`;
       }).join(' · ');
-    }
-    case 'addcom':
+    },
+  },
+  addcom:{
+    titolo:()=>'Addizionale comunale Milano',
+    formula:v=>{
       if(!v.dovuta)return '0 — non dovuta: IRPEF netta è zero';
-      return v.base>toNumber(K.comunale.esenzioneFinoA)
-        ? `${fmt(v.base)} × ${perc(v.aliquota,1)} (sull'intero imponibile)`
-        : `0 — esente fino a ${mila(toNumber(K.comunale.esenzioneFinoA))} € di imponibile`;
-    case 'somma':
-      return `${fmt(v.base)} × ${perc(v.aliquota,1)}`;
-    case 'ti':
-      return `${fmt(v.quotaFissa)} — imponibile ≤ ${mila(toNumber(T.limiteImponibile))} `+
-             `e IRPEF lorda > detrazione − ${mila(toNumber(T.scartoDetrazione))}`;
-    default:
-      return '';
-  }
-}
+      const esente=toNumber(K.comunale.esenzioneFinoA);
+      return v.base>esente
+        ? `${fmt(v.base)} × ${pct(v.aliquota,1)} (sull'intero imponibile)`
+        : `0 — esente fino a ${noCents(esente)} € di imponibile`;
+    },
+  },
+  somma:{
+    titolo:()=>'Somma non imponibile (cuneo)',
+    formula:v=>`${fmt(v.base)} × ${pct(v.aliquota,1)}`,
+  },
+  ti:{
+    titolo:()=>'Trattamento integrativo',
+    formula:v=>{
+      const T=K.trattamentoIntegrativo;
+      return `${fmt(v.quotaFissa)} — imponibile ≤ ${noCents(toNumber(T.limiteImponibile))} `+
+             `e IRPEF lorda > detrazione − ${noCents(toNumber(T.scartoDetrazione))}`;
+    },
+  },
+};
+
+const titolo=v=>RIGHE[v.id].titolo(v);
+const formula=(v,voci)=>RIGHE[v.id].formula(v,voci);
 /* RIGHE-FINE */
 
 /* ---- dettaglio: catena a operatori firmati + pannello della voce scelta ---- */

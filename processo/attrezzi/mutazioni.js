@@ -15,6 +15,11 @@
    caduta, quali ALTRE prove della categoria D sono cadute con lei
    (l'accoppiamento fra le voci, che è un fatto, non un difetto) e
    quante prove di A, B e C.
+
+   Una mutazione può essere dichiarata EQUIVALENTE: una riscrittura
+   che, viste le costanti in `K`, non può cambiare nessun risultato.
+   Lì l'attrezzo rovescia la domanda e pretende che tutto resti
+   verde: se qualcosa si accende, l'equivalenza era falsa.
    ============================================================ */
 
 const fs=require('node:fs');
@@ -88,9 +93,23 @@ const MUTAZIONI=[
    cerca:'&&netto===daIdentita', con:'&&true',
    prova:"un tipo fuori dall'identità"},
 
-  {voce:'riconcilia', rompe:'la somma dichiarata non si controlla più',
-   cerca:'&&voci.every(v=>SOMME.includes(v.somma))', con:'&&true',
-   prova:'non dichiara una somma nota'},
+  {voce:'sommeDichiarate', rompe:'la somma dichiarata non si controlla più',
+   cerca:'const sommeDichiarate=voci=>voci.every(v=>SOMME.includes(v.somma));',
+   con:'const sommeDichiarate=voci=>true;',
+   prova:'la voce orfana si vede'},
+
+  /* Mutante EQUIVALENTE, dichiarato: il terzo argomento viene letto
+     solo sotto i 15.000 € di imponibile, e lì la maggiorazione è
+     sempre zero perché parte da 25.000. `articolo13` e `spettante`
+     coincidono in tutta la fascia in cui contano, quindi nessuna
+     prova può distinguerli — ed è appunto il motivo per cui il
+     motore scrive `articolo13`: la coincidenza fra due soglie di
+     `K` non è una regola, e non deve reggere il D.L. 3/2020.
+     L'attrezzo verifica che la mutazione sia davvero muta. */
+  {voce:'trattamentoIntegrativo', rompe:"guarda il totale invece dell'art. 13",
+   cerca:'trattamentoIntegrativo(I,lorda,detrLav.articolo13)',
+   con:'trattamentoIntegrativo(I,lorda,detrLav.spettante)',
+   equivalente:'le due letture coincidono sotto i 15.000 €'},
 ];
 
 /* ---------- lettura dell'esito: JUnit, che dà il percorso intero ---------- */
@@ -136,8 +155,7 @@ if(pulita.caduti.length){
 }
 console.log(`base: ${pulita.tutti.length} prove verdi\n`);
 
-let sfuggite=0;
-const righe=[];
+let sfuggite=0,equivalenti=0;
 for(const m of MUTAZIONI){
   const occorrenze=sorgente.split(m.cerca).length-1;
   if(occorrenze!==1){
@@ -147,20 +165,34 @@ for(const m of MUTAZIONI){
   }
   fs.writeFileSync(path.join(lavoro,'motore.js'),sorgente.replace(m.cerca,m.con));
   const {caduti}=esegui(lavoro);
+  const abc=['A','B','C'].map(c=>caduti.filter(p=>categoria(p)===c).length);
+
+  if(m.equivalente){
+    const muta=caduti.length===0;
+    if(!muta)sfuggite++;
+    console.log(`${muta?'EQUIVALENTE':'NON EQUIVALENTE'}  ${m.voce} — ${m.rompe}`);
+    console.log(`         · ${m.equivalente}`);
+    if(!muta)for(const c of caduti)console.log(`         ! si accende: ${ultimo(c)}`);
+    console.log(`         A ${abc[0]} · B ${abc[1]} · C ${abc[2]}\n`);
+    equivalenti++;
+    continue;
+  }
+
   const d=caduti.filter(p=>categoria(p)==='D');
   const bersaglio=d.filter(p=>p.includes(m.prova));
   const altre=d.filter(p=>!p.includes(m.prova));
   const colpita=bersaglio.length>0;
   if(!colpita)sfuggite++;
-  righe.push({...m,colpita,altre,
-    abc:['A','B','C'].map(c=>caduti.filter(p=>categoria(p)===c).length)});
   console.log(`${colpita?'ROSSA':'SFUGGITA'}  ${m.voce} — ${m.rompe}`);
-  if(colpita)for(const b of bersaglio)console.log(`         ↳ ${ultimo(b)}`);
+  for(const b of bersaglio)console.log(`         ↳ ${ultimo(b)}`);
   for(const a of altre)console.log(`         · anche: ${ultimo(a)}`);
-  const[a,b,c]=righe[righe.length-1].abc;
-  console.log(`         A ${a} · B ${b} · C ${c}\n`);
+  console.log(`         A ${abc[0]} · B ${abc[1]} · C ${abc[2]}\n`);
 }
 fs.rmSync(lavoro,{recursive:true,force:true});
 
-console.log(`${MUTAZIONI.length} mutazioni, ${MUTAZIONI.length-sfuggite} colte dalla prova della loro voce`);
+const rotture=MUTAZIONI.length-equivalenti;
+console.log(`${rotture} rotture, ${rotture-sfuggite} colte dalla prova della loro voce`+
+  (equivalenti?`, più ${equivalenti} `+
+    (equivalenti===1?'mutazione dichiarata equivalente e verificata muta'
+                    :'mutazioni dichiarate equivalenti e verificate mute'):''));
 if(sfuggite){console.error(`${sfuggite} sfuggite: la prova esiste ma non guarda`);process.exit(1);}

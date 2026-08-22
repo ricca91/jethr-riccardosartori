@@ -72,7 +72,9 @@ const K={
     aliquota:dec('0.008'), esenzioneFinoA:dec('23000'),
   },
   sommaNonImponibile:{                    // L. 207/2024, art. 1 c. 4-5
-    limite:dec('20000'),
+    /* L'ultimo tetto È il limite: sopra i 20.000 € la somma non
+       spetta più. Scriverlo due volte vuol dire poterlo cambiare
+       in un posto solo e non accorgersene. */
     aliquote:[[dec('8500'),dec('0.071')],[dec('15000'),dec('0.053')],[dec('20000'),dec('0.048')]],
   },
   trattamentoIntegrativo:{                // D.L. 3/2020, art. 1
@@ -156,7 +158,12 @@ function detrazioneLavoroDipendente(imponibile){
     base=mul(quotaVariabile,rapporto);
   }
   const maggiorazione=(imponibile>D.maggiorazioneDa&&imponibile<=D.maggiorazioneA)?D.maggiorazione:0n;
-  return{quotaFissa,quotaVariabile,rapporto,maggiorazione,spettante:base+maggiorazione};
+  /* `articolo13` è la detrazione prima della maggiorazione. Serve
+     al trattamento integrativo, che guarda quella e non il totale:
+     tenerla separata evita di far dipendere il D.L. 3/2020 dal
+     fatto che oggi le due finestre non si sovrappongono. */
+  return{quotaFissa,quotaVariabile,rapporto,articolo13:base,maggiorazione,
+    spettante:base+maggiorazione};
 }
 
 /* L. 207/2024 c. 6: piena fra 20.000 e 32.000, poi si consuma
@@ -201,17 +208,17 @@ function addizionaleComunale(imponibile,dovute){
 }
 
 function sommaNonImponibile(imponibile){
-  if(imponibile>K.sommaNonImponibile.limite)return{aliquota:null,importo:0n};
   const riga=K.sommaNonImponibile.aliquote.find(([tetto])=>imponibile<=tetto);
   if(!riga)return{aliquota:null,importo:0n};
   return{aliquota:riga[1],importo:mul(imponibile,riga[1])};
 }
 
 /* D.L. 3/2020: spetta sotto i 15.000 € di imponibile solo se
-   l'IRPEF lorda supera la detrazione da lavoro dipendente
-   diminuita di 75 €. In questa fascia la maggiorazione di 65 €
-   non c'è (parte da 25.000), quindi `detrazione` è la detrazione
-   dell'art. 13 sia che la si legga con sia senza. */
+   l'IRPEF lorda supera la detrazione dell'art. 13 diminuita di
+   75 €. `detrazione` è quella dell'art. 13, senza la
+   maggiorazione: oggi le due letture coinciderebbero, perché la
+   maggiorazione parte da 25.000, ma è una coincidenza fra due
+   soglie e non una regola. */
 function trattamentoIntegrativo(imponibile,lorda,detrazione){
   const T=K.trattamentoIntegrativo;
   return(imponibile<=T.limiteImponibile&&lorda>(detrazione-T.scartoDetrazione))?T.importo:0n;
@@ -227,19 +234,21 @@ function riconcilia(ral,voci,somma=NETTO_LAVORATORE){
   const netto=della.reduce((a,v)=>a+v._i,ral);
   /* L'identità ricostruita per tipo. Che la partizione torni è
      algebra — è il limite dichiarato di questa guardia. Quello che
-     il controllo prende davvero sono due voci orfane: una con un
-     tipo che nell'identità non compare, e una che dichiara una
-     somma che non esiste (o non ne dichiara nessuna), e che quindi
-     sparirebbe dal netto senza che nessuno se ne accorga.
-     Le voci di UN'ALTRA somma nota non entrano qui: la
-     riconciliazione ne verifica una alla volta. */
+     il controllo prende davvero è una voce con un tipo che
+     nell'identità non compare.
+     Le voci di un'ALTRA somma non entrano qui, nemmeno se sono
+     malformate: la riconciliazione ne verifica una alla volta. */
   const perTipo=t=>della.filter(v=>v.tipo===t).reduce((a,v)=>a+v._i,0n);
   const daIdentita=TIPI_DELL_IDENTITA.reduce((a,t)=>a+perTipo(t),ral);
-  return{netto,voci:della.length,
-    verificata:della.length>0
-      &&netto===daIdentita
-      &&voci.every(v=>SOMME.includes(v.somma))};
+  return{netto,quante:della.length,
+    verificata:della.length>0&&netto===daIdentita};
 }
+
+/* Una voce deve dichiarare una somma NOTA, altrimenti sparirebbe da
+   ogni riconciliazione senza che nessuno se ne accorga. È una
+   domanda sull'insieme delle voci, non su una somma sola: per
+   questo sta fuori da riconcilia(), che di somme ne guarda una. */
+const sommeDichiarate=voci=>voci.every(v=>SOMME.includes(v.somma));
 
 /* ============================================================
    LA SEQUENZA — l'ordine dei passi è vincolante, quindi l'ordine
@@ -299,7 +308,7 @@ function calcola(ralInput,mensilita){
 
   /* 9-10. integrazioni di legge */
   const cuneo=sommaNonImponibile(I);
-  const ti=trattamentoIntegrativo(I,lorda,detrLav.spettante);
+  const ti=trattamentoIntegrativo(I,lorda,detrLav.articolo13);
   if(cuneo.importo>0n)
     emetti('somma','integrazione','l207c4',I,cuneo.importo,{aliquota:cuneo.aliquota});
   if(ti>0n)
@@ -318,7 +327,7 @@ function calcola(ralInput,mensilita){
     imponibile:toNumber(I),irpefNetta:toNumber(arrotondaCentesimi(netta)),
     integrazioni:toNumber(arrotondaCentesimi(cuneo.importo)+arrotondaCentesimi(ti)),
     aliquotaContributivaEffettiva:RAL>0n?toNumber(mul(div(contributiTotali,RAL),dec('100'))):0,
-    riconciliazione:{verificata:conti.verificata,
+    riconciliazione:{verificata:conti.verificata&&sommeDichiarate(voci),
       identita:'RAL − contributi − imposte + integrazioni = netto annuo'}};
 }
 
@@ -375,12 +384,12 @@ function applicaMensilita(res,mensilita){
    le dichiarazioni qui sopra sono già globali per la pagina. */
 if(typeof module!=='undefined'&&module.exports){
   module.exports={calcola,applicaMensilita,parseRal,soglie,SALTI,fmt,eur,K,
-    NETTO_LAVORATORE,SOMME,TIPI_DELL_IDENTITA,
+    NETTO_LAVORATORE,
     /* impalcatura, per provare le voci con soli numeri */
-    dec,toNumber,mul,div,
+    dec,toNumber,
     /* le voci e i passi, uno per uno */
-    baseContributiva,contributiIvs,contributoAggiuntivo,contributi,imponibile,
-    perScaglioni,irpefLorda,detrazioneLavoroDipendente,ulterioreDetrazione,
-    applicaCapienza,addizionaleRegionale,addizionaleComunale,
-    sommaNonImponibile,trattamentoIntegrativo,riconcilia};
+    contributiIvs,contributoAggiuntivo,imponibile,irpefLorda,
+    detrazioneLavoroDipendente,ulterioreDetrazione,applicaCapienza,
+    addizionaleRegionale,addizionaleComunale,sommaNonImponibile,
+    trattamentoIntegrativo,riconcilia,sommeDichiarate};
 }
