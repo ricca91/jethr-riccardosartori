@@ -16,11 +16,14 @@ prima del primo risultato.
 | `come-ho-lavorato.html` | la nota di lavoro: perimetro, modello, verifica, limiti |
 | `motore.js` | il calcolo, separato per poterlo provare fuori dal browser |
 | `motore.test.js` | la matrice di prova |
+| `righe.js` | l'adapter che trasforma ogni Voce in una Riga |
+| `righe.test.js` | le prove della seam Voce → Riga |
+| `fonti.js` | il catalogo delle fonti normative usato da pagina e adapter |
 | `../processo/verifica.md` | che cosa è provato, come, e che cosa non lo è |
 
 ## Come si apre
 
-Doppio clic su `index.html`, tenendo `motore.js` nella stessa cartella.
+Doppio clic su `index.html`, tenendo `motore.js`, `righe.js` e `fonti.js` nella stessa cartella.
 Nessuna dipendenza, nessun passo di build, nessuna richiesta di rete: i caratteri
 Wix Madefor Display sono incorporati nel file, quindi la pagina funziona anche offline.
 Vale anche per `come-ho-lavorato.html`, che porta la propria copia dei caratteri per
@@ -34,7 +37,7 @@ Lo stato sta nell'URL (`?ral=&m=&calc=1`), quindi ogni schermata è condivisibil
 ## Come si provano i numeri
 
 ```
-node --test prototipo/motore.test.js
+node --test prototipo/*.test.js
 ```
 
 Node 18 o successivo, zero dipendenze. Lo stesso file `motore.js` che gira nella pagina

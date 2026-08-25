@@ -1277,6 +1277,8 @@ body.jet-base{background:var(--jet-surface-ivory);margin:0;padding-bottom:104px}
 <body class="jet-base">
 <div id="app"></div>
 <script src="motore.js"></script>
+<script src="fonti.js"></script>
+<script src="righe.js"></script>
 <script>
 
 
@@ -1284,17 +1286,6 @@ body.jet-base{background:var(--jet-surface-ivory);margin:0;padding-bottom:104px}
 /* ============================================================
    DATI — una sola sorgente contenutistica, riusata ovunque
    ============================================================ */
-const FONTI={
-  inps101:['INPS, circolare 101/2024','aliquota IVS 9,19% a carico del lavoratore','https://www.inps.it/it/it/inps-comunica/atti/circolari-messaggi-e-normativa/dettaglio.circolari-e-messaggi.2024.11.circolare-numero-101-del-29-11-2024_14714.html'],
-  inps6:['INPS, circolare 6/2026','prima fascia 56.224 € e massimale 122.295 €','https://www.inps.it/it/it/inps-comunica/atti/circolari-messaggi-e-normativa/dettaglio.circolari-e-messaggi.2026.01.circolare-numero-6-del-30-01-2026_15151.html'],
-  l199:['L. 199/2025, art. 1 c. 3','scaglioni IRPEF 2026: 23 / 33 / 43%','https://www.normattiva.it/eli/stato/LEGGE/2025/12/30/199/CONSOLIDATED'],
-  tuir13:['TUIR, art. 13','detrazione da lavoro dipendente e maggiorazione di 65 €','https://def.giustiziatributaria.gov.it/DocTribFrontend/getAttoNormativoDetail.do?ACTION=getArticolo&articolo=Articolo+13&id=%7B31D694E8-4398-4030-873B-FEAF5A6647F9%7D'],
-  l207c4:['L. 207/2024, art. 1 c. 4-5','somma non imponibile fino a 20.000 € di reddito','https://www.normattiva.it/eli/stato/LEGGE/2024/12/30/207/CONSOLIDATED/20251219'],
-  l207c6:['L. 207/2024, art. 1 c. 6','ulteriore detrazione fra 20.000 e 40.000 €','https://www.normattiva.it/eli/stato/LEGGE/2024/12/30/207/CONSOLIDATED/20251219'],
-  dl3:['D.L. 3/2020, art. 1','trattamento integrativo','https://www.normattiva.it/atto/caricaDettaglioAtto?atto.codiceRedazionale=20A02005&atto.dataPubblicazioneGazzetta=2020-04-04&tipoDettaglio=multivigenza'],
-  lomb:['Regione Lombardia','addizionale regionale IRPEF progressiva','https://www.regione.lombardia.it/bollo-auto-e-tributi-regionali/red-addizionale-regionale-irpef'],
-  mi:['Comune di Milano','addizionale comunale 0,8%, esenzione fino a 23.000 €','https://www.comune.milano.it/argomenti/tributi/addizionale-comunale-irpef'],
-};
 const LIMITI=[
   ['Il 9,19% è una scelta di modello','Non è l\'aliquota di ogni impiegato privato: inquadramento INPS, settore, dimensione del datore e fondi speciali possono cambiarla. Qui si assume FPLD ordinario, senza contribuzioni settoriali.'],
   ['«RAL» non è una base legale autonoma','È una convenzione retributiva. Il calcolo assume RAL = imponibile previdenziale = imponibile fiscale prima dei contributi, senza componenti variabili, benefit o rimborsi.'],
@@ -1454,132 +1445,11 @@ function sankey(res,h,fs){
     meno imposte ${eur(tx)}${ig>0?`, più integrazioni di legge ${eur(ig)}`:''}, netto annuo ${eur(ne)}.</p>`;
 }
 
-/* ============================================================
-   RIGHE — dal numero alla frase.
-
-   Il motore emette una VOCE: importo, base, tipo, fonte, e i
-   numeri che sono entrati nel conto. Titolo e formula nascono
-   qui, perché sono disegno e non calcolo — è la distinzione fra
-   «voce» e «riga» del glossario in CONTEXT.md.
-
-   Nessun letterale fiscale in questo blocco: soglie e aliquote
-   arrivano da `K`, esportata dal motore. Se una soglia cambia,
-   cambia in un posto solo e la frase la segue.
-   ============================================================ */
-/* RIGHE-INIZIO */
-/* L'impalcatura sta in inglese, come `fmt`, `eur` e `grp`: serve a
-   far funzionare la macchina, non a descrivere una norma. */
-const noCents=n=>fmt(n).replace(',00','');
-const pct=(n,d)=>(n*100).toFixed(d).replace('.',',')+'%';
-const toThousands=b=>toNumber(b)/1000;
-
-/* Capienza: le detrazioni abbattono l'imposta, non sono
-   rimborsabili. La nota compare su TUTTE le detrazioni appena una
-   di esse non entra intera — è un vincolo sul totale, non su una
-   voce sola. */
-function capienza(v,voci){
-  const detrazioni=voci.filter(x=>x.tipo==='detrazione');
-  if(detrazioni.every(x=>x.capiente))return '';
-  return `  →  spettante ${fmt(v.spettante)} €,`+
-    `  ⚠ capienza: usata ${fmt(v.importo)} € — le detrazioni non sono rimborsabili`;
-}
-
-/* Una riga per voce, titolo e formula accanto: aggiungere una voce
-   è una sola aggiunta qui, non una in un elenco di titoli più una
-   in un ramo di formula. */
-const RIGHE={
-  ivs:{
-    titolo:()=>'Contributi previdenziali IVS',
-    formula:v=>`${fmt(v.base)} × ${pct(v.aliquota,2)}`,
-  },
-  ecc:{
-    titolo:v=>`Contributo aggiuntivo ${pct(v.aliquota,0)}`,
-    formula:v=>`(${fmt(v.baseContributiva)} − ${fmt(v.soglia)}) × ${pct(v.aliquota,0)}`,
-  },
-  lorda:{
-    titolo:()=>'IRPEF lorda',
-    formula:v=>{
-      const sc=K.irpef.scaglioni,al=i=>pct(toNumber(sc[i][1]),0);
-      return `${al(0)} × min(${fmt(v.base)}; ${noCents(toNumber(sc[0][0]))}) `+
-             `+ ${al(1)} sulla quota ${toThousands(sc[0][0])}–${toThousands(sc[1][0])}k `+
-             `+ ${al(2)} oltre`;
-    },
-  },
-  detrlav:{
-    titolo:v=>'Detrazione lavoro dipendente'+
-      (v.maggiorazione>0?` (+${noCents(v.maggiorazione)} €)`:''),
-    formula:(v,voci)=>{
-      const D=K.detrazioneLavoro;
-      let f;
-      if(v.base<=toNumber(D.sogliaFissa))
-        f=`${fmt(v.quotaFissa)} (fisso fino a ${noCents(toNumber(D.sogliaFissa))} €)`;
-      else if(v.base<=toNumber(D.sogliaIntermedia))
-        f=`${noCents(v.quotaFissa)} + ${noCents(v.quotaVariabile)} × ${v.rapporto.toFixed(4)}`;
-      else if(v.base<=toNumber(D.sogliaFinale))
-        f=`${noCents(v.quotaVariabile)} × ${v.rapporto.toFixed(4)}`+
-          `  (rapporto troncato a 4 decimali)`;
-      else f=`0 (imponibile oltre ${noCents(toNumber(D.sogliaFinale))} €)`;
-      if(v.maggiorazione>0)
-        f+=`  +${noCents(v.maggiorazione)} (imponibile `+
-           `${toThousands(D.maggiorazioneDa)}–${toThousands(D.maggiorazioneA)}k)`;
-      return f+capienza(v,voci);
-    },
-  },
-  detrult:{
-    titolo:()=>'Ulteriore detrazione',
-    formula:(v,voci)=>{
-      const U=K.ulterioreDetrazione;
-      const f=v.rapporto===null
-        ? `${fmt(v.quotaFissa)} (imponibile ${toThousands(U.da)}–${toThousands(U.pienoFinoA)}k)`
-        : `${noCents(v.quotaFissa)} × (${noCents(toNumber(U.a))} − ${fmt(v.base)}) `+
-          `÷ ${noCents(toNumber(U.ampiezzaDecrescente))}`;
-      return f+capienza(v,voci);
-    },
-  },
-  addreg:{
-    titolo:()=>'Addizionale regionale Lombardia',
-    formula:v=>{
-      if(!v.dovuta)return '0 — non dovuta: IRPEF netta è zero';
-      const sc=K.regionale.scaglioni;
-      return sc.map(([tetto,aliquota],i)=>{
-        const al=pct(toNumber(aliquota),2);
-        if(tetto===null)return `${al} oltre`;
-        return i===0?`${al} fino a ${toThousands(tetto)}k`
-                    :`${al} ${toThousands(sc[i-1][0])}–${toThousands(tetto)}k`;
-      }).join(' · ');
-    },
-  },
-  addcom:{
-    titolo:()=>'Addizionale comunale Milano',
-    formula:v=>{
-      if(!v.dovuta)return '0 — non dovuta: IRPEF netta è zero';
-      const esente=toNumber(K.comunale.esenzioneFinoA);
-      return v.base>esente
-        ? `${fmt(v.base)} × ${pct(v.aliquota,1)} (sull'intero imponibile)`
-        : `0 — esente fino a ${noCents(esente)} € di imponibile`;
-    },
-  },
-  somma:{
-    titolo:()=>'Somma non imponibile (cuneo)',
-    formula:v=>`${fmt(v.base)} × ${pct(v.aliquota,1)}`,
-  },
-  ti:{
-    titolo:()=>'Trattamento integrativo',
-    formula:v=>{
-      const T=K.trattamentoIntegrativo;
-      return `${fmt(v.quotaFissa)} — imponibile ≤ ${noCents(toNumber(T.limiteImponibile))} `+
-             `e IRPEF lorda > detrazione − ${noCents(toNumber(T.scartoDetrazione))}`;
-    },
-  },
-};
-
-const titolo=v=>RIGHE[v.id].titolo(v);
-const formula=(v,voci)=>RIGHE[v.id].formula(v,voci);
-/* RIGHE-FINE */
-
 /* ---- dettaglio: catena a operatori firmati + pannello della voce scelta ---- */
 function chain(res,st){
   const v=id=>res.voci.find(x=>x.id===id);
+  const righe=componiRighe(res.voci);
+  const r=id=>righe.find(x=>x.id===id);
   const rows=[];
   const grp=t=>rows.push(`<tr class="grp"><td></td><td colspan="2" class="g">${t}</td></tr>`);
   const row=(op,label,val,voce,cls='')=>{
@@ -1592,7 +1462,7 @@ function chain(res,st){
       ${voce?`data-voce="${voce.id}"`:''}><td class="op">${op}</td><td>${nm}</td>
       <td class="amt">${eur(Math.abs(val))}</td></tr>`);
   };
-  const rigaVoce=(op,id)=>{const x=v(id);if(x)row(op,titolo(x),x.importo,x);};
+  const rigaVoce=(op,id)=>{const x=v(id),rx=r(id);if(x)row(op,rx.titolo,x.importo,x);};
   grp('Dalla RAL all\'imponibile');
   row('','RAL',res.input.ral,null);
   rigaVoce('−','ivs');
@@ -1612,15 +1482,16 @@ function chain(res,st){
   rows.push(`<tr class="tot"><td class="op">=</td><td>Netto annuo</td>
     <td class="amt">${eur(res.kpi.nettoAnnuo)}</td></tr>`);
   const sel=st.aperta?res.voci.find(x=>x.id===st.aperta):null;
-  const pane=sel?(()=>{const[t,d,u]=FONTI[sel.fonte];
-    return `<h4>${esc(titolo(sel))}</h4>
+  const rigaSel=sel?r(sel.id):null;
+  const pane=sel?(()=>{const fonte=rigaSel.fonte;
+    return `<h4>${esc(rigaSel.titolo)}</h4>
       <div class="jet-body-s jet-muted" style="margin-bottom:2px">${esc(sel.tipo)} · base ${eur(sel.base)}</div>
-      <code>${esc(formula(sel,res.voci)||'—')}</code>
+      <code>${esc(rigaSel.formula)}</code>
       <div class="jet-body-s"><b>${eur(Math.abs(sel.importo))}</b></div>
       <hr class="jet-divider" style="margin:14px 0">
       <div class="jet-body-xs jet-muted">Fonte</div>
-      <a class="jet-body-s" href="${u}" target="_blank" rel="noopener">${esc(t)}</a>
-      <div class="jet-body-xs jet-muted" style="margin-top:2px">${esc(d)}</div>`;})()
+      <a class="jet-body-s" href="${fonte.url}" target="_blank" rel="noopener">${esc(fonte.titolo)}</a>
+      <div class="jet-body-xs jet-muted" style="margin-top:2px">${esc(fonte.descrizione)}</div>`;})()
     :`<div class="empty"><b>Nessuna voce selezionata.</b><br>
        Clicca una riga della catena — quelle con il segno <span class="jet-info-dot" aria-hidden="true">i</span> —
        per vederne formula, base di calcolo e fonte normativa.</div>`;

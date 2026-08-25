@@ -342,10 +342,9 @@ test.describe('C — non-regressione',()=>{
   /* Golden: rigenerato dal motore, non copiato. Congela il comportamento
      attuale nei punti di riferimento. Non dice che sono giusti — lo dice
      la categoria A. */
-  /* Il campo `fonte` di ogni voce e' una chiave che la pagina usa per pescare
-     la citazione dalla tabella FONTI. Le due cose vivono in file diversi:
-     rinominare una chiave qui rompe il pannello del dettaglio in silenzio.
-     Questo test blocca l'insieme delle chiavi che il motore puo' emettere. */
+  /* Il campo `fonte` di ogni voce è una chiave che l'adapter Voce → Riga
+     risolve nel catalogo delle fonti. Il test dell'adapter verifica la copertura;
+     qui resta congelato l'insieme delle chiavi che il motore può emettere. */
   test('le chiavi delle fonti sono quelle che la pagina si aspetta',()=>{
     const attese=['inps101','inps6','l199','tuir13','l207c4','l207c6','dl3','lomb','mi'];
     const viste=new Set();

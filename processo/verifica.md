@@ -6,14 +6,14 @@ difendibile il resto — che cosa **non** è provato.
 ## Come si esegue
 
 ```
-node --test prototipo/motore.test.js
+node --test prototipo/*.test.js
 ```
 
 Node 18 o successivo. Nessuna dipendenza, nessun `package.json`, niente da installare.
 Il motore (`prototipo/motore.js`) è uno script classico: la stessa riga di codice
 gira nella pagina aperta con un doppio clic e in Node, senza duplicati.
 
-Stato al 22 agosto 2026: **54 prove, tutte verdi** (Node v22.22.2).
+Stato al 25 agosto 2026: **61 prove, tutte verdi** (Node v22.22.2).
 
 Gli attrezzi di verifica stanno in `processo/attrezzi/`, e girano anche loro senza
 dipendenze:
@@ -22,7 +22,6 @@ dipendenze:
 node processo/attrezzi/confronto.js salva base.json      # fotografa 2.001 corse
 node processo/attrezzi/confronto.js confronta base.json  # le riesegue e le confronta
 node processo/attrezzi/mutazioni.js                      # rompe una voce alla volta
-node processo/attrezzi/frasi.js base.json                # le frasi della pagina
 ```
 
 ## Le quattro categorie, e perché stanno separate
@@ -178,11 +177,10 @@ usciti dal motore per disegno, e vanno dichiarati all'invocazione con
 nascosta dentro l'attrezzo. I campi *nuovi* vengono elencati a parte, perché non hanno
 un prima con cui divergere.
 
-**Le frasi.** Escludendo `et` e `formula` resta scoperto proprio ciò che il #15 sposta:
-le parole a schermo. `processo/attrezzi/frasi.js` estrae il blocco `RIGHE` da
-`index.html`, lo esegue con le costanti del motore e ricompone titolo e formula di ogni
-voce di ogni corsa, confrontandoli con quelli che il motore scriveva prima: **23.916
-frasi, tutte identiche**.
+**Le Riga.** `prototipo/righe.test.js` attraversa la stessa seam usata dalla pagina:
+verifica una Riga per ogni Voce nello stesso ordine, copertura completa di identificativi
+e fonti, Capienza trasversale, errori fail-fast e alcuni testi rappresentativi. Nessun
+test estrae o esegue più codice dall'HTML.
 
 **La pagina vera.** Aperta a fianco della versione precedente e guidata dallo stesso
 copione — la catena intera e i pannelli di dettaglio a RAL 35.000: stesso testo, stessi

@@ -258,12 +258,14 @@ const sommeDichiarate=voci=>voci.every(v=>SOMME.includes(v.somma));
 function calcola(ralInput){
   const RAL=arrotondaCentesimi(dec(ralInput));
   const voci=[];
+  const serializza=v=>typeof v==='bigint'?toNumber(v)
+    :Array.isArray(v)?v.map(serializza)
+    :v&&typeof v==='object'?Object.fromEntries(Object.entries(v).map(([k,x])=>[k,serializza(x)]))
+    :v;
   const emetti=(id,tipo,fonte,base,importo,dettagli={})=>{
     const i=arrotondaCentesimi(importo);
     voci.push({id,tipo,somma:NETTO_LAVORATORE,base:toNumber(base),
-      importo:toNumber(i),fonte,
-      ...Object.fromEntries(Object.entries(dettagli)
-        .map(([k,v])=>[k,typeof v==='bigint'?toNumber(v):v])),
+      importo:toNumber(i),fonte,...serializza(dettagli),
       _i:i});
   };
 
@@ -289,22 +291,31 @@ function calcola(ralInput){
   const[usoLav,usoUlt]=capienza.usi;
   const netta=capienza.residua;
 
-  emetti('lorda','imposta','l199',I,-lorda);
+  emetti('lorda','imposta','l199',I,-lorda,{scaglioni:K.irpef.scaglioni});
   emetti('detrlav','detrazione','tuir13',I,usoLav,{
     spettante:detrLav.spettante,quotaFissa:detrLav.quotaFissa,
     quotaVariabile:detrLav.quotaVariabile,rapporto:detrLav.rapporto,
-    maggiorazione:detrLav.maggiorazione,capiente:usoLav===detrLav.spettante});
+    maggiorazione:detrLav.maggiorazione,capiente:usoLav===detrLav.spettante,
+    sogliaFissa:K.detrazioneLavoro.sogliaFissa,
+    sogliaIntermedia:K.detrazioneLavoro.sogliaIntermedia,
+    sogliaFinale:K.detrazioneLavoro.sogliaFinale,
+    maggiorazioneDa:K.detrazioneLavoro.maggiorazioneDa,
+    maggiorazioneA:K.detrazioneLavoro.maggiorazioneA});
   if(detrUlt.spettante>0n)
     emetti('detrult','detrazione','l207c6',I,usoUlt,{
       spettante:detrUlt.spettante,quotaFissa:detrUlt.quotaFissa,
-      rapporto:detrUlt.rapporto,capiente:usoUlt===detrUlt.spettante});
+      rapporto:detrUlt.rapporto,capiente:usoUlt===detrUlt.spettante,
+      da:K.ulterioreDetrazione.da,pienoFinoA:K.ulterioreDetrazione.pienoFinoA,
+      a:K.ulterioreDetrazione.a,
+      ampiezzaDecrescente:K.ulterioreDetrazione.ampiezzaDecrescente});
 
   /* 7-8. addizionali locali */
   const dovute=netta>0n;
   const reg=addizionaleRegionale(I,dovute);
   const com=addizionaleComunale(I,dovute);
-  emetti('addreg','imposta','lomb',I,-reg,{dovuta:dovute});
-  emetti('addcom','imposta','mi',I,-com,{dovuta:dovute,aliquota:K.comunale.aliquota});
+  emetti('addreg','imposta','lomb',I,-reg,{dovuta:dovute,scaglioni:K.regionale.scaglioni});
+  emetti('addcom','imposta','mi',I,-com,{dovuta:dovute,aliquota:K.comunale.aliquota,
+    esenzioneFinoA:K.comunale.esenzioneFinoA});
 
   /* 9-10. integrazioni di legge */
   const cuneo=sommaNonImponibile(I);
@@ -312,7 +323,9 @@ function calcola(ralInput){
   if(cuneo.importo>0n)
     emetti('somma','integrazione','l207c4',I,cuneo.importo,{aliquota:cuneo.aliquota});
   if(ti>0n)
-    emetti('ti','integrazione','dl3',I,ti,{quotaFissa:ti});
+    emetti('ti','integrazione','dl3',I,ti,{quotaFissa:ti,
+      limiteImponibile:K.trattamentoIntegrativo.limiteImponibile,
+      scartoDetrazione:K.trattamentoIntegrativo.scartoDetrazione});
 
   /* 11. la guardia */
   const conti=riconcilia(RAL,voci);
