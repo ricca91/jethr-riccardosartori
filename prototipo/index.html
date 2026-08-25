@@ -1303,7 +1303,7 @@ const LIMITI=[
 ];
 const FAQ=[
   ['Perché il netto mensile non coincide con la mia busta paga?','Il calcolo è annuale e di competenza. Le addizionali vengono trattenute a rate nell\'anno successivo al conguaglio, la tredicesima non beneficia delle stesse detrazioni mensili e il conguaglio di fine anno riequilibra tutto. Per questo il numero è etichettato <b>media</b>, mai «importo del cedolino».'],
-  ['Perché scegliere 12 o 13 mensilità non cambia il netto annuo?','Perché non è un dato di calcolo: è solo il divisore con cui si presenta lo stesso netto annuo. Le trattenute non cambiano. Puoi verificarlo qui sopra — cambiando il selettore il netto annuo resta identico e si muove solo la media. Se cambiasse, sarebbe un errore.'],
+  ['Perché scegliere 12, 13 o 14 mensilità non cambia il netto annuo?','Perché non è un dato di calcolo: è solo il divisore con cui si presenta lo stesso netto annuo. Le trattenute non cambiano. Puoi verificarlo qui sopra — cambiando il selettore il netto annuo resta identico e si muove solo la media. Se cambiasse, sarebbe un errore.'],
   ['Perché a volte un euro lordo in più fa <em>scendere</em> il netto?','Perché alcune misure sono esenzioni con soglia secca, non franchigie: superata la soglia si perdono per intero. Il caso più forte è l\'esenzione dell\'addizionale comunale di Milano: a 25.327,62 € di RAL un centesimo lordo in più costa circa 184 € netti l\'anno. È corretto, non è un errore di arrotondamento — ed è il motivo per cui queste soglie vanno mostrate invece che nascoste.'],
   ['Quali sono i contributi a carico del dipendente?','Il contributo IVS del 9,19% sull\'imponibile previdenziale, più un contributo aggiuntivo dell\'1% sulla quota che supera la prima fascia pensionabile (56.224 € nel 2026). Sopra il massimale di 122.295 € entrambi si fermano: è il motivo per cui l\'aliquota contributiva effettiva scende oltre quella soglia.'],
   ['Cosa non è incluso nel calcolo?','TFR, costo azienda e contributi del datore, INAIL, CCNL e fondi di solidarietà, fondi sanitari e previdenza complementare, familiari a carico, altri redditi, oneri deducibili e detraibili, benefit, premi e agevolazioni personali. Nessuno di questi è ricavabile dalla sola RAL: chiederli significherebbe un modulo lungo prima del primo risultato.'],
@@ -1353,8 +1353,8 @@ function form(st){
       <div class="jet-field">
         <label class="jet-label" id="mlab">Mensilità</label>
         <div class="jet-segmented" role="group" aria-labelledby="mlab">
-          <button data-m="12" aria-pressed="${st.mensilita===12}">12</button>
-          <button data-m="13" aria-pressed="${st.mensilita===13}">13</button>
+          ${MENSILITA_AMMESSE.map(m=>
+            `<button data-m="${m}" aria-pressed="${st.mensilita===m}">${m}</button>`).join('')}
         </div>
         <p class="jet-help">Divide il netto annuo per mostrarne la media. Non cambia il calcolo.</p>
       </div>
@@ -1773,7 +1773,8 @@ const st={ralRaw:'35.000',mensilita:13,
 function fromURL(){
   const p=new URLSearchParams(location.search);
   if(p.get('ral'))st.ralRaw=p.get('ral');
-  if(p.get('m'))st.mensilita=p.get('m')==='12'?12:13;
+  const mensilita=Number(p.get('m'));
+  if(MENSILITA_AMMESSE.includes(mensilita))st.mensilita=mensilita;
   if(p.get('calc')==='1')commit(true);
 }
 function toURL(){
@@ -1790,7 +1791,7 @@ function commit(silenzioso){
   else if(Number(v)<0){st.errore='La RAL non può essere negativa.';st.res=null;}
   else if(Number(v)===4700000){st.res=null;st.dirty=false;st.eggPending=true;}
   else if(Number(v)>1000000){st.errore='Il calcolo è disponibile fino a una RAL di 1.000.000 €.';st.res=null;}
-  else{st.res=calcola(v,st.mensilita);st.dirty=false;st.eggPending=false;
+  else{st.res=applicaMensilita(calcola(v),st.mensilita);st.dirty=false;st.eggPending=false;
     if(!st.aperta)st.aperta='ivs';}   // mostra subito a cosa serve il pannello
   if(!silenzioso)render();
 }

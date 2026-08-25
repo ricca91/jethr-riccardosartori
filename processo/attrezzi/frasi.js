@@ -35,7 +35,7 @@ const base=JSON.parse(fs.readFileSync(file,'utf8'));
 
 let confrontate=0,diverse=0;
 for(const corsa of base.corse){
-  const ora=M.calcola(corsa.ral,base.mensilita);
+  const ora=M.calcola(corsa.ral);
   for(const prima of corsa.risultato.voci){
     const adesso=ora.voci.find(v=>v.id===prima.id);
     if(!adesso){console.error(`RAL ${corsa.ral}: la voce ${prima.id} è sparita`);diverse++;continue;}

@@ -31,11 +31,11 @@ const {calcola}=require(path.join(__dirname,'..','..','prototipo','motore.js'));
 /* Le 2.001 corse: passo di 100 € da 0 a 200.000 €. È la stessa
    griglia della categoria C dei test, così l'attrezzo e la rete di
    non-regressione guardano lo stesso spazio. */
-const PASSO=100,MAX=200000,MENSILITA=13;
+const PASSO=100,MAX=200000;
 const griglia=()=>{const r=[];for(let ral=0;ral<=MAX;ral+=PASSO)r.push(String(ral));return r;};
 
 function corse(){
-  return griglia().map(ral=>({ral,risultato:calcola(ral,MENSILITA)}));
+  return griglia().map(ral=>({ral,risultato:calcola(ral)}));
 }
 
 /* Confronto ricorsivo. Restituisce le divergenze come percorsi
@@ -81,8 +81,7 @@ const esclusi=new Set(
 
 if(comando==='salva'){
   if(!file){console.error('uso: confronto.js salva <file.json>');process.exit(2);}
-  const dati={versione:calcola('35000',13).versioneRegole,passo:PASSO,max:MAX,
-    mensilita:MENSILITA,corse:corse()};
+  const dati={versione:calcola('35000').versioneRegole,passo:PASSO,max:MAX,corse:corse()};
   fs.writeFileSync(file,JSON.stringify(dati));
   console.log(`salvate ${dati.corse.length} corse in ${file} (${dati.versione})`);
   process.exit(0);

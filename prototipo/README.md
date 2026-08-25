@@ -76,10 +76,11 @@ fuori perimetro sarebbe peggio che non rispondere. Sopra **122.295 €** il risu
 compare con l'avviso che assume nessuna anzianità contributiva al 31 dicembre 1995 —
 l'unico punto in cui la sola RAL non basta più.
 
-Il selettore **12/13 mensilità** si applica senza ricalcolare nulla: divide un netto annuo
-già calcolato. È la dimostrazione a schermo di una tesi del modello — le mensilità sono
-presentazione, non calcolo. Se richiedessero un ricalcolo, la pagina direbbe il contrario
-di quello che afferma.
+`calcola()` restituisce soltanto il risultato annuale. Il selettore **12/13/14 mensilità**
+passa quel risultato ad `applicaMensilita()`, che divide il netto annuo già calcolato.
+È la dimostrazione a schermo di una tesi del modello — le mensilità sono presentazione,
+non calcolo. Se richiedessero un ricalcolo, la pagina direbbe il contrario di quello che
+afferma.
 
 ## Come si pubblica
 

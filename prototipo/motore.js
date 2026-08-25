@@ -255,7 +255,7 @@ const sommeDichiarate=voci=>voci.every(v=>SOMME.includes(v.somma));
    È il codice: si legge dall'alto in basso e nessuno può
    riordinarlo per sbaglio spostando una riga di una tabella.
    ============================================================ */
-function calcola(ralInput,mensilita){
+function calcola(ralInput){
   const RAL=arrotondaCentesimi(dec(ralInput));
   const voci=[];
   const emetti=(id,tipo,fonte,base,importo,dettagli={})=>{
@@ -318,12 +318,10 @@ function calcola(ralInput,mensilita){
   const conti=riconcilia(RAL,voci);
   const netto=conti.netto;
   const imposte=arrotondaCentesimi(netta)+arrotondaCentesimi(reg)+arrotondaCentesimi(com);
-  const media=arrotondaCentesimi(div(netto,dec(String(mensilita))));
-
-  return{input:{ral:toNumber(RAL),mensilita},versioneRegole:'regole-2026-v1',
+  return{input:{ral:toNumber(RAL)},versioneRegole:'regole-2026-v1',
     voci:voci.map(({_i,...r})=>r),
-    kpi:{nettoAnnuo:toNumber(netto),mediaMensile:toNumber(media),
-      totaleImposte:toNumber(imposte),totaleContributi:toNumber(contributiTotali)},
+    kpi:{nettoAnnuo:toNumber(netto),totaleImposte:toNumber(imposte),
+      totaleContributi:toNumber(contributiTotali)},
     imponibile:toNumber(I),irpefNetta:toNumber(arrotondaCentesimi(netta)),
     integrazioni:toNumber(arrotondaCentesimi(cuneo.importo)+arrotondaCentesimi(ti)),
     aliquotaContributivaEffettiva:RAL>0n?toNumber(mul(div(contributiTotali,RAL),dec('100'))):0,
@@ -362,18 +360,21 @@ let SOGLIE=null;
 function soglie(){
   if(SOGLIE)return SOGLIE;
   SOGLIE=SALTI.map(([r,causa])=>{
-    const hi=calcola(r,13).kpi.nettoAnnuo,lo=calcola((Number(r)-0.01).toFixed(2),13).kpi.nettoAnnuo;
+    const hi=calcola(r).kpi.nettoAnnuo,lo=calcola((Number(r)-0.01).toFixed(2)).kpi.nettoAnnuo;
     return{ral:Number(r),causa,delta:Math.round((hi-lo)*100)/100};
   });
   return SOGLIE;
 }
 
 /* ---------- mensilità: presentazione, non calcolo ----------
-   Il selettore 12/13 non rientra nel motore fiscale: divide un
+   Il selettore 12/13/14 non rientra nel motore fiscale: divide un
    netto annuo già calcolato. Applicarlo così — invece di
    richiamare calcola() — è ciò che rende vera a schermo la tesi
    del contratto: cambiare mensilità non può muovere il netto. */
-function applicaMensilita(res,mensilita){
+const MENSILITA_AMMESSE=Object.freeze([12,13,14]);
+function applicaMensilita(res,mensilita=13){
+  if(!MENSILITA_AMMESSE.includes(mensilita))
+    throw new RangeError(`Mensilità non ammessa: ${mensilita}`);
   const netto=dec(res.kpi.nettoAnnuo.toFixed(2));
   const media=arrotondaCentesimi(div(netto,dec(String(mensilita))));
   return{...res,input:{...res.input,mensilita},
@@ -383,7 +384,7 @@ function applicaMensilita(res,mensilita){
 /* Node: require('./motore.js'). Browser: `module` non esiste e
    le dichiarazioni qui sopra sono già globali per la pagina. */
 if(typeof module!=='undefined'&&module.exports){
-  module.exports={calcola,applicaMensilita,parseRal,soglie,SALTI,fmt,eur,K,
+  module.exports={calcola,applicaMensilita,MENSILITA_AMMESSE,parseRal,soglie,SALTI,fmt,eur,K,
     NETTO_LAVORATORE,
     /* impalcatura, per provare le voci con soli numeri */
     dec,toNumber,
