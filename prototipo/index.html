@@ -1298,7 +1298,13 @@ const LIMITI=[
 const FAQ=[
   ['Perché il netto mensile non coincide con la mia busta paga?','Il calcolo è annuale e di competenza. Le addizionali vengono trattenute a rate nell\'anno successivo al conguaglio, la tredicesima non beneficia delle stesse detrazioni mensili e il conguaglio di fine anno riequilibra tutto. Per questo il numero è etichettato <b>media</b>, mai «importo del cedolino».'],
   ['Perché scegliere 12, 13 o 14 mensilità non cambia il netto annuo?','Perché non è un dato di calcolo: è solo il divisore con cui si presenta lo stesso netto annuo. Le trattenute non cambiano. Puoi verificarlo qui sopra — cambiando il selettore il netto annuo resta identico e si muove solo la media. Se cambiasse, sarebbe un errore.'],
-  ['Perché a volte un euro lordo in più fa <em>scendere</em> il netto?','Perché alcune misure locali sono esenzioni con soglia secca, non franchigie: superata la soglia si perdono per intero. Il dettaglio mostra sempre la regola del comune selezionato. Nel caso predefinito di Milano, a 25.327,62 € di RAL un centesimo lordo in più costa circa 184 € netti l\'anno.'],
+  ['Perché a volte un euro lordo in più fa <em>scendere</em> il netto?',stato=>{
+    const geo=GEOGRAFIA_ITALIA.risolvi(stato.comune);
+    const locali=soglie({comune:stato.comune}).filter(s=>s.ambito==='comunale');
+    if(!locali.length)return `Alcune misure sono esenzioni con soglia secca, non franchigie. Per ${esc(geo.comune.nome)} lo snapshot non contiene una discontinuità comunale generale; restano le soglie nazionali e le eventuali soglie regionali.`;
+    const s=locali[0];
+    return `Perché alcune misure locali sono esenzioni con soglia secca, non franchigie: superata la soglia si perdono per intero. Per ${esc(geo.comune.nome)}, alla RAL di ${eur(s.ral)}, il salto dell’addizionale comunale vale ${eur(Math.abs(s.delta))} sul netto annuo.`;
+  }],
   ['Quali sono i contributi a carico del dipendente?','Il contributo IVS del 9,19% sull\'imponibile previdenziale, più un contributo aggiuntivo dell\'1% sulla quota che supera la prima fascia pensionabile (56.224 € nel 2026). Sopra il massimale di 122.295 € entrambi si fermano: è il motivo per cui l\'aliquota contributiva effettiva scende oltre quella soglia.'],
   ['Cosa non è incluso nel calcolo?','TFR, costo azienda e contributi del datore, INAIL, CCNL e fondi di solidarietà, fondi sanitari e previdenza complementare, familiari a carico, altri redditi, oneri deducibili e detraibili, benefit, premi e agevolazioni personali. Nessuno di questi è ricavabile dalla sola RAL: chiederli significherebbe un modulo lungo prima del primo risultato.'],
   ['Da dove vengono le regole?','Solo da fonti primarie: Istat per i comuni attivi, MEF per le addizionali locali, leggi di bilancio, TUIR e circolari INPS. Ogni voce del dettaglio rimanda al riferimento ufficiale applicato.'],
@@ -1566,7 +1572,7 @@ function metodo(stato=st){
       <b>Fuori dalla pagina</b> gira una matrice di prove sul motore, in quattro categorie tenute
       distinte perché provano cose diverse: poche ancore confrontate a mano con la norma
       (la catena completa a 35.000 €, il massimale, la fine dell'esenzione comunale, la capienza
-      delle detrazioni), le sette soglie e i quattro cambi di pendenza presi a un centesimo di
+      delle detrazioni), le soglie nazionali e locali del comune selezionato e i cambi di pendenza presi a un centesimo di
       distanza, una rete di regressione a passo di 100 € da 0 a 200.000 €, e ogni voce del calcolo
       esercitata da sola.</p>
       <p class="jet-body-s" style="margin:0;color:var(--jet-text-regular);max-width:74ch">
@@ -1585,9 +1591,9 @@ function metodo(stato=st){
     </div>
   </div>`;
 }
-function faq(){
+function faq(stato=st){
   return `<div class="jet-accordion">${FAQ.map(([q,a])=>`<details><summary><span>${q}</span></summary>
-    <div class="jet-body-s" style="padding-bottom:18px;color:var(--jet-text-regular);max-width:74ch">${a}</div>
+    <div class="jet-body-s" style="padding-bottom:18px;color:var(--jet-text-regular);max-width:74ch">${typeof a==='function'?a(stato):a}</div>
   </details>`).join('')}</div>`;
 }
 

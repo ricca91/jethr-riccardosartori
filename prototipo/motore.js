@@ -1,6 +1,6 @@
 /* ============================================================
    MOTORE — calcolatore RAL → netto, contratto di calcolo #4
-   Regole 2026, caso Milano / impiegato privato / anno intero.
+   Regole 2026, comune selezionabile / impiegato privato / anno intero.
 
    Script classico, non modulo: la pagina deve aprirsi con un
    doppio clic (file://), dove i moduli non si caricano.
@@ -399,24 +399,90 @@ const parseRal=s=>{const t=String(s).trim().replace(/\s|€/g,'');
 /* ============================================================
    SOGLIE — il motore emette fatti, la UI decide quando mostrarli
    ============================================================ */
-const SALTI=[
-  ['9001.12','si attiva il trattamento integrativo'],
-  ['9360.21','scattano le addizionali e la somma non imponibile passa dal 7,1% al 5,3%'],
-  ['16518.02','decade il trattamento integrativo (imponibile 15.000 €)'],
-  ['22024.02','la somma non imponibile lascia il posto all\'ulteriore detrazione (imponibile 20.000 €)'],
-  ['25327.62','finisce l\'esenzione dell\'addizionale comunale di Milano (imponibile 23.000 €)'],
-  ['27530.02','si attiva la maggiorazione di 65 € (imponibile 25.000 €)'],
-  ['38542.02','decade la maggiorazione di 65 € (imponibile 35.000 €)'],
-];
-let SOGLIE=null;
-function soglie(){
-  if(SOGLIE)return SOGLIE;
-  SOGLIE=SALTI.map(([r,causa])=>{
-    const hi=calcola(r).kpi.nettoAnnuo,lo=calcola((Number(r)-0.01).toFixed(2)).kpi.nettoAnnuo;
-    return{ral:Number(r),causa,delta:Math.round((hi-lo)*100)/100};
-  });
-  return SOGLIE;
+/* Le norme esprimono quasi tutte le soglie sull'imponibile, non sulla RAL.
+   La prima RAL che le supera va quindi trovata passando dalla stessa funzione
+   contributiva usata dal calcolo. In questo modo un cambio di aliquota o di
+   arrotondamento non lascia in giro una RAL diventata falsa. */
+function ralOltreImponibile(imponibileInput){
+  const limite=dec(String(imponibileInput));
+  let basso=0n,alto=(limite/CENT+1n)*CENT;
+  while(imponibile(alto)<=limite)alto*=2n;
+  while(basso+CENT<alto){
+    const mezzo=((basso+alto)/(2n*CENT))*CENT;
+    if(imponibile(mezzo)>limite)alto=mezzo;else basso=mezzo;
+  }
+  return (toNumber(alto)).toFixed(2);
 }
+function primaRal(predicato,massimo){
+  let basso=0n,alto=dec(String(massimo));
+  if(!predicato(calcola(toNumber(alto))))throw new RangeError('Evento non trovato nel perimetro');
+  while(basso+CENT<alto){
+    const mezzo=((basso+alto)/(2n*CENT))*CENT;
+    if(predicato(calcola(toNumber(mezzo))))alto=mezzo;else basso=mezzo;
+  }
+  return toNumber(alto).toFixed(2);
+}
+const EVENTI_NAZIONALI=[
+  {ral:()=>primaRal(r=>r.voci.some(v=>v.id==='ti'),15000),
+    causa:'si attiva il trattamento integrativo'},
+  {imponibile:8500,causa:'la somma non imponibile passa dal 7,1% al 5,3%'},
+  {imponibile:15000,causa:'decade il trattamento integrativo (imponibile 15.000 €)'},
+  {imponibile:20000,causa:'la somma non imponibile lascia il posto all\'ulteriore detrazione (imponibile 20.000 €)'},
+  {imponibile:25000,causa:'si attiva la maggiorazione di 65 € (imponibile 25.000 €)'},
+  {imponibile:35000,causa:'decade la maggiorazione di 65 € (imponibile 35.000 €)'},
+];
+function confiniRegola(regola){
+  const confini=new Map();
+  const aggiungi=(imponibile,tipo)=>{
+    const n=Number(imponibile),tipi=confini.get(n)||[];
+    if(!tipi.includes(tipo))tipi.push(tipo);
+    confini.set(n,tipi);
+  };
+  if(Number(regola.esenzioneFinoA)>0)
+    aggiungi(regola.esenzioneFinoA,'esenzione');
+  if(regola.fasciaInteraFinoA)
+    aggiungi(regola.fasciaInteraFinoA[0],'fascia intera');
+  if(regola.tipo==='aliquotePerReddito')for(const [tetto] of regola.fasce||[])
+    if(tetto!==null)aggiungi(tetto,'fascia sull’intero reddito');
+  for(const d of regola.detrazioni||[]){
+    if(d.fissa===undefined)continue; // la detrazione progressiva è continua
+    if(d.oltre!==undefined)aggiungi(d.oltre,'inizio detrazione generale');
+    if(d.finoA!==undefined)aggiungi(d.finoA,'fine detrazione generale');
+  }
+  return [...confini].map(([imponibile,tipi])=>({imponibile,tipo:tipi.join(' e ')}));
+}
+const CACHE_SOGLIE=new Map();
+const voceImporto=(r,id)=>r.voci.find(v=>v.id===id)?.importo||0;
+const centesimi=n=>Math.round(n*100)/100;
+function soglie(opzioni={}){
+  const geo=GEOGRAFIA.risolvi(opzioni.comune||'F205'),chiave=geo.comune.catastale;
+  if(CACHE_SOGLIE.has(chiave))return CACHE_SOGLIE.get(chiave);
+  const risultato=[];
+  for(const evento of EVENTI_NAZIONALI){
+    const ral=evento.ral?evento.ral():ralOltreImponibile(evento.imponibile);
+    const sopra=calcola(ral,{comune:chiave}),sotto=calcola((Number(ral)-.01).toFixed(2),{comune:chiave});
+    risultato.push({ral:Number(ral),imponibile:evento.imponibile??null,ambito:'nazionale',
+      causa:evento.causa,delta:centesimi(sopra.kpi.nettoAnnuo-sotto.kpi.nettoAnnuo)});
+  }
+  for(const [ambito,regola,nome,id] of [
+    ['regionale',geo.regionale,geo.regione.nome,'addreg'],
+    ['comunale',geo.comunale,geo.comune.nome,'addcom'],
+  ])for(const confine of confiniRegola(regola)){
+    const ral=ralOltreImponibile(confine.imponibile);
+    const sopra=calcola(ral,{comune:chiave}),sotto=calcola((Number(ral)-.01).toFixed(2),{comune:chiave});
+    const delta=centesimi(voceImporto(sopra,id)-voceImporto(sotto,id));
+    if(Math.abs(delta)<=.01)continue; // cambio di pendenza, non salto
+    risultato.push({ral:Number(ral),imponibile:confine.imponibile,ambito,
+      causa:`${confine.tipo} dell’addizionale ${ambito} di ${nome} (imponibile ${fmt(confine.imponibile)} €)`,delta});
+  }
+  risultato.sort((a,b)=>a.ral-b.ral||a.ambito.localeCompare(b.ambito));
+  const congelato=Object.freeze(risultato.map(Object.freeze));
+  CACHE_SOGLIE.set(chiave,congelato);
+  return congelato;
+}
+/* Compatibilità del contratto storico: la serie senza opzioni resta Milano,
+   ma le RAL sono derivate dal motore e non costituiscono più la sorgente. */
+const SALTI=Object.freeze(soglie().map(s=>Object.freeze([s.ral.toFixed(2),s.causa])));
 
 /* ---------- mensilità: presentazione, non calcolo ----------
    Il selettore 12/13/14 non rientra nel motore fiscale: divide un

@@ -57,9 +57,10 @@ formula, base di calcolo e fonte normativa di ogni riga. Chi vuole solo il numer
 alla prima schermata; chi non si fida scende fino alla norma.
 
 **2. Le soglie si mostrano, non si nascondono.** In alcuni punti un euro lordo in più fa
-*scendere* il netto: a 25.327,62 € di RAL finisce l'esenzione dell'addizionale comunale
-di Milano e il netto perde 184 € l'anno. È un'esenzione, non una franchigia. Un
-calcolatore che liscia quel gradino mente; questo lo calcola e lo spiega nelle FAQ.
+*scendere* il netto. `soglie({ comune })` separa gli eventi nazionali, regionali e
+comunali e la FAQ usa sempre il comune selezionato. Per Milano, a 25.327,62 € di RAL
+finisce l'esenzione comunale e il netto perde 184 € l'anno; un comune senza esenzione
+non eredita quel gradino. È un'esenzione, non una franchigia.
 
 **3. Ogni euro torna, per costruzione.** Il netto non è un totale calcolato a parte e poi
 confrontato con le voci: **è** la somma delle voci arrotondate. La verifica gira a ogni
@@ -97,6 +98,14 @@ passa quel risultato ad `applicaMensilita()`, che divide il netto annuo già cal
 È la dimostrazione a schermo di una tesi del modello — le mensilità sono presentazione,
 non calcolo. Se richiedessero un ricalcolo, la pagina direbbe il contrario di quello che
 afferma.
+
+`soglie({ comune: codiceCatastale })` restituisce soltanto le discontinuità effettive:
+ogni elemento dichiara `ambito` (`nazionale`, `regionale` o `comunale`), imponibile,
+RAL, causa e variazione del netto. Le soglie normative sull'imponibile vengono convertite
+nella prima RAL che le supera usando contributi e arrotondamenti del motore; i normali
+cambi di scaglione progressivo, che modificano la pendenza ma non creano un salto, non
+sono inclusi. Senza opzioni il default resta Milano per compatibilità. La cache è separata
+per codice catastale.
 
 ## Come si pubblica
 

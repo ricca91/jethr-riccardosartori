@@ -46,4 +46,26 @@ test.describe('geografia nel calcolo',()=>{
     assert.equal(r.voci.find(v=>v.id==='addcom').fonte.tipo,'comunale');
     assert.notEqual(r.kpi.nettoAnnuo,26032.17);
   });
+
+  test('le soglie comunali seguono il comune selezionato e non una cache globale',()=>{
+    const comunali=catastale=>M.soglie({comune:catastale}).filter(s=>s.ambito==='comunale');
+
+    const milano=comunali('F205');
+    assert.deepEqual(milano.map(s=>s.imponibile),[23000]);
+    assert.match(milano[0].causa,/Milano/);
+
+    const candiolo=comunali('B592');
+    assert.deepEqual(candiolo.map(s=>s.imponibile),[15000]);
+    assert.match(candiolo[0].causa,/Candiolo/);
+
+    assert.deepEqual(comunali('A074'),[]); // Agliè: aliquota unica senza esenzione
+    assert.deepEqual(comunali('F205'),milano); // ritorno a Milano: cache per comune
+  });
+
+  test('espone soltanto le discontinuità regionali, non i normali scaglioni progressivi',()=>{
+    assert.deepEqual(M.soglie({comune:'F205'}).filter(s=>s.ambito==='regionale'),[]);
+    const lazio=M.soglie({comune:'H501'}).filter(s=>s.ambito==='regionale');
+    assert.deepEqual(lazio.map(s=>s.imponibile),[28000,30000]);
+    assert.match(lazio[0].causa,/fascia intera.*detrazione generale/);
+  });
 });
