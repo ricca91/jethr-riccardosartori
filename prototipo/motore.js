@@ -28,6 +28,8 @@ const mul=(a,b)=>(a*b)/S;
 const div=(a,b)=>(a*S)/b;
 const min=(a,b)=>a<b?a:b;
 const toNumber=a=>Number(a)/1e8;
+const GEOGRAFIA=typeof module!=='undefined'&&module.exports?require('./geografia.js')
+  :GEOGRAFIA_ITALIA;
 
 /* Arrotondamento e troncamento non sono impalcatura: sono due
    regole del contratto, e stanno in italiano come le altre.
@@ -197,14 +199,47 @@ function applicaCapienza(lorda,spettanti){
 
 /* Le addizionali si pagano solo se l'IRPEF netta è dovuta: a
    imposta azzerata dalle detrazioni non c'è addizionale. */
-function addizionaleRegionale(imponibile,dovute){
-  return dovute?perScaglioni(imponibile,K.regionale.scaglioni):0n;
+function regolaDecimale(n){return dec(String(n??0));}
+function scaglioniDecimali(scaglioni){return scaglioni.map(([t,a])=>[t===null?null:dec(String(t)),regolaDecimale(a)]);}
+function detrazioneLocale(imponibile,detrazioni=[]){
+  let totale=0n;
+  for(const d of detrazioni){
+    const oltre=d.oltre===undefined?null:dec(String(d.oltre));
+    const fino=d.finoA===undefined?null:dec(String(d.finoA));
+    if((oltre!==null&&imponibile<=oltre)||(fino!==null&&imponibile>fino))continue;
+    if(d.fissa!==undefined)totale+=dec(String(d.fissa));
+    else if(d.massimo!==undefined){
+      const da=dec(String(d.progressivaDa)),ampiezza=dec(String(d.ampiezza));
+      totale+=min(dec(String(d.massimo)),mul(dec(String(d.massimo)),div(imponibile-da,ampiezza)));
+    }
+  }
+  return totale;
+}
+function calcolaAddizionale(imponibile,dovute,regola){
+  if(!dovute||!regola||regola.tipo==='nessuna')return 0n;
+  if(regola.esenzioneFinoA&&imponibile<=dec(String(regola.esenzioneFinoA)))return 0n;
+  let imposta=0n;
+  if(regola.fasciaInteraFinoA&&imponibile<=dec(String(regola.fasciaInteraFinoA[0])))
+    imposta=mul(imponibile,regolaDecimale(regola.fasciaInteraFinoA[1]));
+  else if(regola.tipo==='aliquotaUnica')imposta=mul(imponibile,regolaDecimale(regola.aliquota));
+  else if(regola.tipo==='scaglioni')imposta=perScaglioni(imponibile,scaglioniDecimali(regola.scaglioni));
+  else if(regola.tipo==='aliquotePerReddito'){
+    const fascia=regola.fasce.find(([t])=>t===null||imponibile<=dec(String(t)));
+    imposta=fascia?mul(imponibile,regolaDecimale(fascia[1])):0n;
+  }else throw new TypeError(`Tipo di addizionale sconosciuto: ${regola.tipo}`);
+  const detrazione=detrazioneLocale(imponibile,regola.detrazioni);
+  return imposta>detrazione?imposta-detrazione:0n;
+}
+function addizionaleRegionale(imponibile,dovute,regola){
+  return regola?calcolaAddizionale(imponibile,dovute,regola)
+    :(dovute?perScaglioni(imponibile,K.regionale.scaglioni):0n);
 }
 
 /* Esenzione secca, non franchigia: superati i 23.000 € si paga
    sull'intero imponibile, non sull'eccedenza. */
-function addizionaleComunale(imponibile,dovute){
-  return(dovute&&imponibile>K.comunale.esenzioneFinoA)?mul(imponibile,K.comunale.aliquota):0n;
+function addizionaleComunale(imponibile,dovute,regola){
+  return regola?calcolaAddizionale(imponibile,dovute,regola)
+    :((dovute&&imponibile>K.comunale.esenzioneFinoA)?mul(imponibile,K.comunale.aliquota):0n);
 }
 
 function sommaNonImponibile(imponibile){
@@ -255,7 +290,8 @@ const sommeDichiarate=voci=>voci.every(v=>SOMME.includes(v.somma));
    È il codice: si legge dall'alto in basso e nessuno può
    riordinarlo per sbaglio spostando una riga di una tabella.
    ============================================================ */
-function calcola(ralInput){
+function calcola(ralInput,opzioni={}){
+  const geo=GEOGRAFIA.risolvi(opzioni.comune||'F205');
   const RAL=arrotondaCentesimi(dec(ralInput));
   const voci=[];
   const serializza=v=>typeof v==='bigint'?toNumber(v)
@@ -311,11 +347,12 @@ function calcola(ralInput){
 
   /* 7-8. addizionali locali */
   const dovute=netta>0n;
-  const reg=addizionaleRegionale(I,dovute);
-  const com=addizionaleComunale(I,dovute);
-  emetti('addreg','imposta','lomb',I,-reg,{dovuta:dovute,scaglioni:K.regionale.scaglioni});
-  emetti('addcom','imposta','mi',I,-com,{dovuta:dovute,aliquota:K.comunale.aliquota,
-    esenzioneFinoA:K.comunale.esenzioneFinoA});
+  const reg=addizionaleRegionale(I,dovute,geo.regionale);
+  const com=addizionaleComunale(I,dovute,geo.comunale);
+  emetti('addreg','imposta',{tipo:'regionale',...geo.regionale.fonte},I,-reg,
+    {dovuta:dovute,regola:geo.regionale,nome:geo.regione.nome});
+  emetti('addcom','imposta',{tipo:'comunale',...geo.comunale.fonte},I,-com,
+    {dovuta:dovute,regola:geo.comunale,nome:geo.comune.nome});
 
   /* 9-10. integrazioni di legge */
   const cuneo=sommaNonImponibile(I);
@@ -331,7 +368,9 @@ function calcola(ralInput){
   const conti=riconcilia(RAL,voci);
   const netto=conti.netto;
   const imposte=arrotondaCentesimi(netta)+arrotondaCentesimi(reg)+arrotondaCentesimi(com);
-  return{input:{ral:toNumber(RAL)},versioneRegole:'regole-2026-v1',
+  return{input:{ral:toNumber(RAL),comune:geo.comune.catastale},versioneRegole:'regole-2026-v2',
+    geografia:{regione:geo.regione.nome,provincia:geo.provincia.nome,comune:geo.comune.nome,
+      catastale:geo.comune.catastale,asOf:geo.meta.asOf},
     voci:voci.map(({_i,...r})=>r),
     kpi:{nettoAnnuo:toNumber(netto),totaleImposte:toNumber(imposte),
       totaleContributi:toNumber(contributiTotali)},
@@ -404,6 +443,6 @@ if(typeof module!=='undefined'&&module.exports){
     /* le voci e i passi, uno per uno */
     contributiIvs,contributoAggiuntivo,imponibile,irpefLorda,
     detrazioneLavoroDipendente,ulterioreDetrazione,applicaCapienza,
-    addizionaleRegionale,addizionaleComunale,sommaNonImponibile,
+    calcolaAddizionale,addizionaleRegionale,addizionaleComunale,sommaNonImponibile,
     trattamentoIntegrativo,riconcilia,sommeDichiarate};
 }

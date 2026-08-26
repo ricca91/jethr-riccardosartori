@@ -14,6 +14,22 @@ const formatta=n=>{const neg=n<0,x=Math.abs(n).toFixed(2),[i,f]=x.split('.');
 const senzaCentesimi=n=>formatta(n).replace(',00','');
 const percentuale=(n,d)=>(n*100).toFixed(d).replace('.',',')+'%';
 const migliaia=n=>n/1000;
+const descriviRegola=(v,comunale)=>{
+  if(!v.dovuta)return'0 — non dovuta: IRPEF netta è zero';
+  const r=v.regola;
+  if(r.tipo==='nessuna')return'0 — il comune non applica l’addizionale';
+  if(r.esenzioneFinoA&&v.base<=r.esenzioneFinoA)
+    return`0 — esente fino a ${senzaCentesimi(r.esenzioneFinoA)} € di imponibile`;
+  if(r.tipo==='aliquotaUnica')
+    return`${formatta(v.base)} × ${percentuale(r.aliquota,comunale?1:2)} (sull'intero imponibile)`;
+  if(r.tipo==='aliquotePerReddito')return r.fasce.map(([t,a])=>
+    `${percentuale(a,2)} ${t===null?'oltre':`fino a ${migliaia(t)}k`}`).join(' · ')+' sull’intero imponibile';
+  if(r.tipo==='scaglioni')return r.scaglioni.map(([t,a],i)=>{
+    const al=percentuale(a,2);if(t===null)return`${al} oltre`;
+    return i===0?`${al} fino a ${migliaia(t)}k`:`${al} ${migliaia(r.scaglioni[i-1][0])}–${migliaia(t)}k`;
+  }).join(' · ');
+  return r.revisione||r.tipo;
+};
 
 const richiede=(voce,...campi)=>{
   for(const campo of campi)
@@ -53,17 +69,10 @@ const RICETTE={
         ?`${formatta(v.quotaFissa)} (imponibile ${migliaia(v.da)}–${migliaia(v.pienoFinoA)}k)`
         :`${senzaCentesimi(v.quotaFissa)} × (${senzaCentesimi(v.a)} − ${formatta(v.base)}) ÷ ${senzaCentesimi(v.ampiezzaDecrescente)}`;
       return f+notaCapienza(v,voci);}},
-  addreg:{campi:['dovuta','scaglioni'],titolo:()=>`Addizionale regionale Lombardia`,formula:v=>{
-    if(!v.dovuta)return'0 — non dovuta: IRPEF netta è zero';
-    return v.scaglioni.map(([tetto,aliquota],i)=>{
-      const al=percentuale(aliquota,2);if(tetto===null)return`${al} oltre`;
-      return i===0?`${al} fino a ${migliaia(tetto)}k`:`${al} ${migliaia(v.scaglioni[i-1][0])}–${migliaia(tetto)}k`;
-    }).join(' · ');}},
-  addcom:{campi:['dovuta','aliquota','esenzioneFinoA'],titolo:()=>`Addizionale comunale Milano`,formula:v=>{
-    if(!v.dovuta)return'0 — non dovuta: IRPEF netta è zero';
-    return v.base>v.esenzioneFinoA
-      ?`${formatta(v.base)} × ${percentuale(v.aliquota,1)} (sull'intero imponibile)`
-      :`0 — esente fino a ${senzaCentesimi(v.esenzioneFinoA)} € di imponibile`;}},
+  addreg:{campi:['dovuta','regola','nome'],titolo:v=>`Addizionale regionale ${v.nome}`,
+    formula:v=>descriviRegola(v,false)},
+  addcom:{campi:['dovuta','regola','nome'],titolo:v=>`Addizionale comunale ${v.nome}`,
+    formula:v=>descriviRegola(v,true)},
   somma:{campi:['base','aliquota'],titolo:()=>`Somma non imponibile (cuneo)`,
     formula:v=>`${formatta(v.base)} × ${percentuale(v.aliquota,1)}`},
   ti:{campi:['quotaFissa','limiteImponibile','scartoDetrazione'],titolo:()=>`Trattamento integrativo`,
@@ -81,12 +90,21 @@ function componiRighe(voci){
     viste.add(voce.id);
     const ricetta=RICETTE[voce.id];
     if(!ricetta)throw new Error(`Voce sconosciuta: ${voce.id}`);
-    if(!CATALOGO_FONTI[voce.fonte])throw new Error(`Fonte sconosciuta: ${voce.fonte}`);
+    if(typeof voce.fonte==='string'&&!CATALOGO_FONTI[voce.fonte])throw new Error(`Fonte sconosciuta: ${voce.fonte}`);
+    if(typeof voce.fonte==='object'&&(!voce.fonte.url||!voce.fonte.tipo))
+      throw new Error(`Fonte locale incompleta: ${voce.id}`);
     richiede(voce,...ricetta.campi);
   }
   return voci.map(voce=>{
     const ricetta=RICETTE[voce.id];
-    const[titoloFonte,descrizioneFonte,urlFonte]=CATALOGO_FONTI[voce.fonte];
+    const locale=typeof voce.fonte==='object';
+    const[titoloFonte,descrizioneFonte,urlFonte]=locale
+      ?[`MEF — addizionale ${voce.fonte.tipo}`,
+        `Regola ${voce.fonte.annoOrigine}, ${voce.fonte.stato}; snapshot ${voce.fonte.asOf}`+
+          (voce.fonte.numeroDelibera||voce.fonte.numero?`; atto n. ${voce.fonte.numeroDelibera||voce.fonte.numero}`:'')+
+          (voce.fonte.dataPubblicazione?`, pubblicato ${voce.fonte.dataPubblicazione}`:''),
+        voce.fonte.url]
+      :CATALOGO_FONTI[voce.fonte];
     return{id:voce.id,titolo:ricetta.titolo(voce),formula:ricetta.formula(voce,voci),
       fonte:{titolo:titoloFonte,descrizione:descrizioneFonte,url:urlFonte}};
   });

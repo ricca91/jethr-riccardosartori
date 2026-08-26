@@ -29,7 +29,10 @@ test.describe('adapter Voce → Riga',()=>{
       for(const voce of voci){id.add(voce.id);fonti.add(voce.fonte);}
     }
     assert.deepEqual([...id].sort(),['addcom','addreg','detrlav','detrult','ecc','ivs','lorda','somma','ti']);
-    assert.deepEqual([...fonti].sort(),Object.keys(FONTI).sort());
+    const statiche=[...fonti].filter(f=>typeof f==='string');
+    assert.deepEqual(statiche.sort(),Object.keys(FONTI).filter(k=>!['lomb','mi'].includes(k)).sort());
+    assert.ok([...fonti].some(f=>f.tipo==='regionale'));
+    assert.ok([...fonti].some(f=>f.tipo==='comunale'));
   });
 
   test('compone le formule rappresentative dai soli fatti della Voce',()=>{

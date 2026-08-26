@@ -306,7 +306,7 @@ test.describe('C — non-regressione',()=>{
      che afferma a schermo. */
   test('calcola restituisce il risultato annuale, senza preferenze di presentazione',()=>{
     const annuale=calcola('35000');
-    assert.deepEqual(annuale.input,{ral:35000});
+    assert.deepEqual(annuale.input,{ral:35000,comune:'F205'});
     assert.ok(!Object.hasOwn(annuale.kpi,'mediaMensile'));
 
     const presentato=applicaMensilita(annuale);
@@ -345,13 +345,15 @@ test.describe('C — non-regressione',()=>{
   /* Il campo `fonte` di ogni voce è una chiave che l'adapter Voce → Riga
      risolve nel catalogo delle fonti. Il test dell'adapter verifica la copertura;
      qui resta congelato l'insieme delle chiavi che il motore può emettere. */
-  test('le chiavi delle fonti sono quelle che la pagina si aspetta',()=>{
-    const attese=['inps101','inps6','l199','tuir13','l207c4','l207c6','dl3','lomb','mi'];
+  test('le chiavi e le provenienze delle fonti sono quelle che la pagina si aspetta',()=>{
+    const attese=['inps101','inps6','l199','tuir13','l207c4','l207c6','dl3'];
     const viste=new Set();
-    for(let ral=0;ral<=200000;ral+=500)
-      for(const v of calcola(String(ral)).voci)viste.add(v.fonte);
+    for(let ral=0;ral<=200000;ral+=500)for(const v of calcola(String(ral)).voci){
+      if(typeof v.fonte==='string')viste.add(v.fonte);
+      else assert.match(v.fonte.tipo,/^(regionale|comunale)$/);
+    }
     for(const k of viste)assert.ok(attese.includes(k),`fonte sconosciuta: ${k}`);
-    assert.deepEqual([...viste].sort(),attese.filter(k=>viste.has(k)).sort());
+    assert.deepEqual([...viste].sort(),attese.sort());
   });
 
   test('golden — netto annuo nei punti di riferimento',()=>{

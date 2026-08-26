@@ -3,10 +3,10 @@
 Una pagina che risponde a una domanda sola: di una retribuzione annua lorda, quanto resta
 in tasca, dove finisce il resto e perché.
 
-Un solo dato da inserire, la RAL. Anno, città e contratto non sono selezionabili: sono
-dichiarati in cima alla pagina — **regole 2026, Milano, settore privato, tempo
-indeterminato, anno intero**. Un caso solo, spiegato per intero, invece di un modulo lungo
-prima del primo risultato.
+Si inserisce la RAL e si sceglie il domicilio fiscale con tre controlli dipendenti:
+**regione → provincia → comune**. Il profilo resta dichiarato — regole 2026, settore
+privato, tempo indeterminato, anno intero — mentre le addizionali coprono tutti i 7.894
+comuni Istat attivi nello snapshot del 21 febbraio 2026.
 
 ## I file
 
@@ -19,6 +19,9 @@ prima del primo risultato.
 | `righe.js` | l'adapter che trasforma ogni Voce in una Riga |
 | `righe.test.js` | le prove della seam Voce → Riga |
 | `fonti.js` | il catalogo delle fonti normative usato da pagina e adapter |
+| `geografia.js` | la piccola interface per elenchi dipendenti e risoluzione per codice catastale |
+| `dati-addizionali-2026.js` | lo snapshot runtime generato da Istat e MEF |
+| `../processo/attrezzi/importa-addizionali.js` | l'import deterministico degli snapshot ufficiali |
 | `../processo/verifica.md` | che cosa è provato, come, e che cosa non lo è |
 
 ## Come si apre
@@ -32,7 +35,8 @@ restare apribile da sola.
 Il motore è uno script classico e non un modulo ES proprio per questo: i moduli non si
 caricano da `file://`, gli script classici sì.
 
-Lo stato sta nell'URL (`?ral=&m=&calc=1`), quindi ogni schermata è condivisibile.
+Lo stato sta nell'URL (`?ral=&m=&c=&calc=1`), incluso il codice catastale del comune,
+quindi ogni schermata è condivisibile.
 
 ## Come si provano i numeri
 
@@ -70,8 +74,17 @@ detrazioni con la capienza, IRPEF netta, addizionali — dovute solo se l'IRPEF 
 positiva — e integrazioni di legge. Troncamento a quattro decimali solo sui rapporti
 dell'art. 13, dove la norma lo impone.
 
-Versione delle regole: `regole-2026-v1`. Fonti primarie, tutte citate nella pagina:
-leggi di bilancio 2025 e 2026, TUIR, circolari INPS, Regione Lombardia, Comune di Milano.
+Versione delle regole: `regole-2026-v2`. Fonti primarie, tutte citate nella pagina:
+leggi di bilancio 2025 e 2026, TUIR, circolari INPS, Istat e MEF. Le pubblicazioni
+comunali 2026 si sovrappongono alla disciplina 2025 prorogata; ogni regola conserva
+annualità, `asOf`, stato definitivo/provvisorio ed estremi disponibili della delibera.
+
+Per rigenerare lo snapshot, dopo aver sostituito i quattro file ufficiali in
+`processo/dati/fonti/`, eseguire:
+
+```
+node processo/attrezzi/importa-addizionali.js
+```
 
 L'input accetta RAL da 0 a **1.000.000 €**. Oltre, il calcolatore si ferma e lo dice:
 il modello non è pensato per quelle cifre e restituire un numero preciso su un caso
