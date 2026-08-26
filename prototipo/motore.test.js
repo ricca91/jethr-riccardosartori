@@ -614,3 +614,293 @@ test.describe('D — le voci da sole',()=>{
         assert.equal(voce.somma,M.NETTO_LAVORATORE,`${ral} → ${voce.id}`);
   });
 });
+
+/* ============================================================
+   E — CARICHI DI FAMIGLIA (art. 12 TUIR)
+   Valori derivati a mano dalla norma, non rigenerati dal motore:
+   è la categoria A applicata a una regola nuova.
+   ============================================================ */
+const {detrazioniCarichiFamiglia}=M;
+const spettante=(imponibile,nucleo)=>
+  detrazioniCarichiFamiglia(dec(imponibile),nucleo).map(v=>toNumber(v.spettante));
+const esiti=(imponibile,nucleo)=>
+  detrazioniCarichiFamiglia(dec(imponibile),nucleo).map(v=>v.esito);
+const CONIUGE=[{tipo:'coniuge'}];
+
+test.describe('E — coniuge a carico (art. 12 c. 1 lett. a)',()=>{
+
+  /* 800 − 110 × (10.000 ÷ 15.000). Il rapporto vale 0,66666…,
+     e il comma 4 impone di assumerne le prime quattro cifre:
+     0,6666 → 800 − 73,326 = 726,674. */
+  test('primo rapporto: 800 meno 110 per il rapporto troncato a quattro decimali',()=>{
+    assert.deepEqual(spettante('10000',CONIUGE),[726.674]);
+  });
+
+  test('a 15.000 il rapporto è uno e il comma 4 fissa la detrazione a 690',()=>{
+    assert.deepEqual(spettante('15000',CONIUGE),[690]);
+  });
+
+  /* Comma 4: rapporto pari a zero, la detrazione non compete.
+     Succede a reddito zero e di nuovo a 80.000. */
+  test('a reddito zero il rapporto è zero e la detrazione non compete',()=>{
+    assert.deepEqual(spettante('0',CONIUGE),[0]);
+    assert.deepEqual(esiti('0',CONIUGE),['rapportoFuoriIntervallo']);
+  });
+
+  test('a 80.000 il terzo rapporto è zero e la detrazione non compete',()=>{
+    assert.deepEqual(spettante('80000',CONIUGE),[0]);
+    assert.deepEqual(esiti('80000',CONIUGE),['rapportoFuoriIntervallo']);
+  });
+
+  test('fra 15.000 e 40.000 la detrazione è fissa a 690',()=>{
+    assert.deepEqual(spettante('20000',CONIUGE),[690]);
+  });
+
+  /* Lett. b): cinque scalini fra 29.000 e 35.200, che si sommano
+     alla quota fissa. È l'unico punto in cui la detrazione RISALE. */
+  test('lettera b: gli scalini fra 29.000 e 35.200 si sommano ai 690',()=>{
+    assert.deepEqual(spettante('29100',CONIUGE),[700]);
+    assert.deepEqual(spettante('31783.50',CONIUGE),[710]);
+    assert.deepEqual(spettante('34800',CONIUGE),[720]);
+    assert.deepEqual(spettante('35050',CONIUGE),[710]);
+    assert.deepEqual(spettante('35150',CONIUGE),[700]);
+    assert.deepEqual(spettante('35300',CONIUGE),[690]);
+  });
+
+  test('terzo rapporto: 690 per (80.000 − reddito) ÷ 40.000',()=>{
+    assert.deepEqual(spettante('60000',CONIUGE),[345]);
+  });
+
+  test('oltre 80.000 la detrazione non compete',()=>{
+    assert.deepEqual(spettante('90000',CONIUGE),[0]);
+  });
+
+  /* Comma 2: il coniuge non è a carico oltre 2.840,51 € di reddito
+     proprio, e allora nessuna formula si applica. */
+  test('oltre 2.840,51 € di reddito proprio il coniuge non è a carico',()=>{
+    assert.deepEqual(esiti('31783.50',[{tipo:'coniuge',reddito:'2840.52'}]),['familiareNonACarico']);
+    assert.deepEqual(spettante('31783.50',[{tipo:'coniuge',reddito:'2840.52'}]),[0]);
+    assert.deepEqual(esiti('31783.50',[{tipo:'coniuge',reddito:'2840.51'}]),['spetta']);
+  });
+});
+
+test.describe('E — figli a carico (art. 12 c. 1 lett. c)',()=>{
+  const figlio=(eta,reddito)=>({tipo:'figlio',eta,reddito});
+
+  /* 950 × (95.000 − 31.783,50) ÷ 95.000 = 950 × 0,6654 = 632,13,
+     con il rapporto troncato alle prime quattro cifre decimali. */
+  test('un figlio solo: 950 per il rapporto sulla soglia di 95.000',()=>{
+    assert.deepEqual(spettante('31783.50',[figlio(22)]),[632.13]);
+  });
+
+  /* «In presenza di più figli che danno diritto alla detrazione,
+     l'importo di 95.000 è aumentato per tutti di 15.000 per ogni
+     figlio successivo al primo»: due figli → 110.000. */
+  test('due figli che danno diritto: la soglia sale di 15.000 per tutti',()=>{
+    assert.deepEqual(spettante('31783.50',[figlio(22),figlio(25)]),[675.45,675.45]);
+  });
+
+  /* Il figlio sotto i 21 anni non dà diritto alla detrazione,
+     quindi non conta nemmeno per far salire la soglia. */
+  test('il figlio sotto i 21 anni non alza la soglia degli altri',()=>{
+    assert.deepEqual(spettante('31783.50',[figlio(17),figlio(22)]),[0,632.13]);
+  });
+
+  test('sotto i 21 anni la detrazione è assorbita dall\'Assegno Unico',()=>{
+    assert.deepEqual(esiti('31783.50',[figlio(20)]),['assorbitaAssegnoUnico']);
+    assert.deepEqual(esiti('31783.50',[figlio(21)]),['spetta']);
+  });
+
+  test('dai 30 anni compiuti la detrazione non spetta più',()=>{
+    assert.deepEqual(esiti('31783.50',[figlio(29)]),['spetta']);
+    assert.deepEqual(esiti('31783.50',[figlio(30)]),['oltreTrentaAnni']);
+  });
+
+  /* L'età è il fatto che decide. Se manca, il motore non inventa un
+     default: dichiara che manca, e la pagina lo dice. */
+  test('senza età dichiarata il motore dice che il fatto manca',()=>{
+    const v=detrazioniCarichiFamiglia(dec('31783.50'),[{tipo:'figlio'}])[0];
+    assert.equal(v.esito,'etaNonDichiarata');
+    assert.equal(v.eta,null);
+    assert.equal(v.limiteRedditoFamiliare,null);
+    assert.equal(toNumber(v.spettante),0);
+  });
+
+  /* Comma 2: 4.000 € fino a 24 anni, 2.840,51 € dopo. */
+  test('il limite di reddito del figlio cambia a 24 anni',()=>{
+    assert.deepEqual(esiti('31783.50',[figlio(24,'4000')]),['spetta']);
+    assert.deepEqual(esiti('31783.50',[figlio(24,'4000.01')]),['familiareNonACarico']);
+    assert.deepEqual(esiti('31783.50',[figlio(25,'2840.51')]),['spetta']);
+    assert.deepEqual(esiti('31783.50',[figlio(25,'2840.52')]),['familiareNonACarico']);
+  });
+
+  /* Comma 4: rapporto pari a zero, minore di zero o uguale a uno,
+     la detrazione non compete. Uguale a uno significa reddito zero. */
+  test('a reddito zero il rapporto è uno e la detrazione non compete',()=>{
+    assert.deepEqual(esiti('0',[figlio(22)]),['rapportoFuoriIntervallo']);
+  });
+
+  test('alla soglia e oltre il rapporto non è positivo e non compete',()=>{
+    assert.deepEqual(esiti('95000',[figlio(22)]),['rapportoFuoriIntervallo']);
+    assert.deepEqual(esiti('96000',[figlio(22)]),['rapportoFuoriIntervallo']);
+    assert.deepEqual(spettante('94000',[figlio(22)]),[9.975]);
+  });
+});
+
+test.describe('E — altri familiari a carico (art. 12 c. 1 lett. d)',()=>{
+  const ascendente=reddito=>({tipo:'ascendente',reddito});
+
+  /* 750 × (80.000 − 31.783,50) ÷ 80.000 = 750 × 0,6027 = 452,025 */
+  test('750 per il rapporto sulla soglia di 80.000',()=>{
+    assert.deepEqual(spettante('31783.50',[ascendente()]),[452.025]);
+  });
+
+  /* La soglia non cresce: l'aumento di 15.000 è dei soli figli. */
+  test('più ascendenti non alzano la soglia',()=>{
+    assert.deepEqual(spettante('31783.50',[ascendente(),ascendente()]),[452.025,452.025]);
+  });
+
+  test('a reddito zero il rapporto è uno e la detrazione non compete',()=>{
+    assert.deepEqual(esiti('0',[ascendente()]),['rapportoFuoriIntervallo']);
+  });
+
+  test('a 80.000 e oltre non compete',()=>{
+    assert.deepEqual(esiti('80000',[ascendente()]),['rapportoFuoriIntervallo']);
+    assert.deepEqual(esiti('80001',[ascendente()]),['rapportoFuoriIntervallo']);
+  });
+
+  test('oltre 2.840,51 € di reddito proprio l\'ascendente non è a carico',()=>{
+    assert.deepEqual(esiti('31783.50',[ascendente('2840.52')]),['familiareNonACarico']);
+  });
+});
+
+test.describe('E — il nucleo come input del motore',()=>{
+  test('rifiuta un tipo di familiare che non esiste nell\'art. 12',()=>{
+    assert.throws(()=>detrazioniCarichiFamiglia(dec('31783.50'),[{tipo:'zio'}]),
+      /Tipo di familiare sconosciuto: zio/);
+  });
+
+  test('rifiuta il secondo coniuge',()=>{
+    assert.throws(()=>detrazioniCarichiFamiglia(dec('31783.50'),
+      [{tipo:'coniuge'},{tipo:'coniuge'}]),/un solo coniuge/);
+  });
+
+  test('rifiuta un\'età negativa o non intera',()=>{
+    assert.throws(()=>detrazioniCarichiFamiglia(dec('31783.50'),[{tipo:'figlio',eta:-1}]),/Età/);
+    assert.throws(()=>detrazioniCarichiFamiglia(dec('31783.50'),[{tipo:'figlio',eta:1.5}]),/Età/);
+  });
+
+  test('senza nucleo non valuta niente',()=>{
+    assert.deepEqual(detrazioniCarichiFamiglia(dec('31783.50')),[]);
+    assert.deepEqual(detrazioniCarichiFamiglia(dec('31783.50'),[]),[]);
+  });
+});
+
+test.describe('E — i carichi di famiglia dentro calcola()',()=>{
+  const NUCLEO=[{tipo:'coniuge'},{tipo:'figlio',eta:22},{tipo:'figlio',eta:17},{tipo:'ascendente'}];
+  const conNucleo=(ral,nucleo)=>calcola(ral,{comune:'F205',nucleo});
+  const famiglia=res=>res.voci.filter(v=>/^detrfam\d+$/.test(v.id));
+
+  /* Senza nucleo dichiarato la pagina di oggi non si muove di un
+     centesimo: è la condizione perché la funzione sia additiva. */
+  test('senza nucleo il risultato è identico a quello di oggi',()=>{
+    assert.deepEqual(calcola('35000',{comune:'F205',nucleo:[]}),calcola('35000',{comune:'F205'}));
+    assert.equal(conNucleo('35000',[]).kpi.nettoAnnuo,26032.17);
+  });
+
+  /* Una voce per persona, nell'ordine dichiarato: è la scelta
+     presa col prototipo di #35. Anche chi non porta detrazione ha
+     la sua riga, perché la pagina deve poter dire perché. */
+  test('emette una voce per familiare dichiarato, nell\'ordine',()=>{
+    const voci=famiglia(conNucleo('35000',NUCLEO));
+    assert.deepEqual(voci.map(v=>v.id),['detrfam1','detrfam2','detrfam3','detrfam4']);
+    assert.deepEqual(voci.map(v=>v.tipoFamiliare),['coniuge','figlio','figlio','ascendente']);
+    assert.deepEqual(voci.map(v=>v.importo),[710,632.13,0,452.03]);
+    assert.deepEqual(voci.map(v=>v.esito),['spetta','spetta','assorbitaAssegnoUnico','spetta']);
+    for(const v of voci){
+      assert.equal(v.tipo,'detrazione');
+      assert.equal(v.somma,M.NETTO_LAVORATORE);
+      assert.equal(v.base,31783.5);
+    }
+  });
+
+  test('ogni familiare porta la fonte della sua lettera dell\'art. 12',()=>{
+    assert.deepEqual(famiglia(conNucleo('35000',NUCLEO)).map(v=>v.fonte),
+      ['tuir12a','tuir12c','tuir12c','tuir12d']);
+  });
+
+  test('le detrazioni di famiglia entrano nel netto e la somma chiude',()=>{
+    const res=conNucleo('35000',NUCLEO);
+    assert.equal(res.irpefNetta,3247.92);          // 5.042,08 − 1.794,16
+    assert.equal(res.kpi.nettoAnnuo,27826.33);     // 26.032,17 + 1.794,16
+    assert.equal(res.kpi.totaleImposte,3957.17);
+    assert.ok(res.riconciliazione.verificata);
+  });
+
+  /* La capienza non basta: la quota usata si ripartisce in
+     proporzione a quanto spetta a ciascuno. La ripartizione è una
+     convenzione di presentazione — la norma somma e basta — ma la
+     somma di quel che si usa deve essere esattamente la capienza. */
+  test('a capienza insufficiente la quota usata si ripartisce pro quota',()=>{
+    const res=conNucleo('17000',[{tipo:'coniuge'},{tipo:'figlio',eta:22},{tipo:'ascendente'}]);
+    const voci=famiglia(res);
+    assert.equal(c2(voci.reduce((a,v)=>a+v.importo,0)),490.77);   // l'IRPEF netta di prima
+    for(const v of voci){
+      assert.ok(v.importo<=v.spettante,`${v.id}: usata oltre lo spettante`);
+      assert.equal(v.capiente,false);
+    }
+    assert.equal(res.irpefNetta,0);
+    assert.ok(res.riconciliazione.verificata);
+  });
+
+  /* Chi non ha diritto non riceve nemmeno il resto
+     dell'arrotondamento: zero deve restare zero. */
+  test('chi non ha diritto resta a zero anche nella ripartizione',()=>{
+    const voci=famiglia(conNucleo('17000',
+      [{tipo:'coniuge'},{tipo:'figlio',eta:15},{tipo:'ascendente'}]));
+    assert.equal(voci[1].importo,0);
+    assert.equal(voci[1].spettante,0);
+  });
+
+  /* A IRPEF netta azzerata dalle detrazioni non c'è addizionale:
+     è la stessa regola che vale già per le detrazioni da lavoro. */
+  test('se le detrazioni di famiglia azzerano l\'IRPEF, le addizionali non sono dovute',()=>{
+    const res=conNucleo('17000',[{tipo:'coniuge'},{tipo:'figlio',eta:22}]);
+    assert.equal(res.irpefNetta,0);
+    assert.equal(importo(res,'addreg'),0);
+    assert.equal(importo(res,'addcom'),0);
+    assert.equal(voce(res,'addreg').dovuta,false);
+  });
+
+  test('un nucleo malformato ferma il calcolo',()=>{
+    assert.throws(()=>conNucleo('35000',[{tipo:'nipote'}]),/Tipo di familiare sconosciuto/);
+    assert.throws(()=>conNucleo('35000','coniuge'),/deve essere un array/);
+  });
+});
+
+test.describe('E — le soglie con un nucleo dichiarato',()=>{
+  const NUCLEO=[{tipo:'coniuge'},{tipo:'figlio',eta:22},{tipo:'ascendente'}];
+
+  /* Il salto dell'esenzione comunale di Milano esiste perché a
+     quella RAL c'è IRPEF netta da pagare. Con tre familiari a
+     carico l'imposta è già zero da entrambi i lati della soglia:
+     il salto non c'è, e la pagina non deve raccontarlo lo stesso. */
+  test('un nucleo che azzera l\'IRPEF cancella il salto comunale',()=>{
+    const comunali=opzioni=>soglie(opzioni).filter(s=>s.ambito==='comunale');
+    assert.equal(comunali({comune:'F205'}).length,1);
+    assert.equal(comunali({comune:'F205',nucleo:NUCLEO}).length,0);
+  });
+
+  test('senza nucleo la tabella delle soglie non si muove',()=>{
+    assert.deepEqual(soglie({comune:'F205',nucleo:[]}),soglie({comune:'F205'}));
+  });
+
+  /* La cache è per comune: senza il nucleo nella chiave, il primo
+     nucleo dichiarato resterebbe appiccicato a tutti gli altri. */
+  test('la cache distingue nuclei diversi sullo stesso comune',()=>{
+    const uno=soglie({comune:'F205',nucleo:[{tipo:'coniuge'}]});
+    const due=soglie({comune:'F205',nucleo:NUCLEO});
+    assert.notDeepEqual(uno,due);
+    assert.deepEqual(soglie({comune:'F205',nucleo:[{tipo:'coniuge'}]}),uno);
+  });
+});

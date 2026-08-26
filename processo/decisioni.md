@@ -84,6 +84,39 @@ perimetro, modello, verifica e limiti a chi apre la demo senza passare da questo
 stesse cose che stanno qui, per un lettore che è arrivato dall'altra parte. L'easter egg si
 apre su una RAL precisa, e chi conosce Jet HR sa già quale.
 
+## Il nucleo familiare: quattro decisioni prese col prototipo (#35)
+
+Il [#35](https://github.com/ricca91/jethr-riccardosartori/issues/35) lasciava aperta una domanda
+che non si poteva decidere a tavolino: le detrazioni di famiglia diventano **una voce sola, una
+per tipo di familiare, o una per persona?** Sono nate tre varianti dell'interfaccia sulla pagina
+vera, commutabili con un parametro, e la scelta è arrivata guardandole.
+
+**Una voce per persona.** Vince perché è l'unica forma in cui la pagina può dire *perché* una
+detrazione è zero. Il figlio di diciassette anni ha la sua riga, con `0,00 €` e il motivo scritto
+accanto: sotto i 21 anni la detrazione non esiste, è assorbita dall'Assegno Unico. Una voce sola
+seppellirebbe quel fatto dentro una formula lunga; una voce per tipo lo direbbe di «i figli»,
+non di quel figlio.
+
+**Le righe stanno dentro il gruppo IRPEF, non in un gruppo loro.** Il prototipo le aveva messe
+sotto un'intestazione «Carichi di famiglia», e il risultato era che la riga di totale «IRPEF
+netta» finiva orfana, come se fosse il totale della famiglia. Sono detrazioni dell'imposta:
+stanno dove stanno le altre.
+
+**Il motore emette codici, non frasi.** `assorbitaAssegnoUnico` è un fatto; «sotto i 21 anni la
+detrazione è assorbita dall'Assegno Unico» è un racconto. La separazione fra Voce e Riga di
+`CONTEXT.md` regge anche qui: il primo esce da `motore.js`, il secondo nasce in `righe.js`.
+
+**Il nucleo si dichiara e poi si preme Calcola**, come per la RAL e per il comune. Il prototipo
+ricalcolava a ogni cifra digitata e si leggeva bene, ma metteva in pagina numeri live accanto a
+una catena ferma. La pagina ha una tesi sola — quello che si vede viene tutto dallo stesso
+calcolo, e quel calcolo chiude — e vale più di un clic risparmiato. Finché il risultato a schermo
+non è stato calcolato per *quel* nucleo, le colonne «detrazione» e «perché» dicono `—`.
+
+Il prototipo ha anche corretto due errori di merito prima che diventassero codice: la soglia dei
+figli cresce solo per i figli **che danno diritto** alla detrazione, e i rapporti dell'art. 12
+vanno **troncati a quattro decimali** come quelli dell'art. 13 (c. 4). Entrambi erano sbagliati
+nelle formule scritte a memoria, ed entrambi ora hanno una prova.
+
 ## Se un link di un ticket non porta da nessuna parte
 
 I ticket sono stati scritti mentre il lavoro procedeva, quindi citano la repo **com'era in quel

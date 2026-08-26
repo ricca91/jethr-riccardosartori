@@ -82,6 +82,27 @@ const K={
   trattamentoIntegrativo:{                // D.L. 3/2020, art. 1
     limiteImponibile:dec('15000'), importo:dec('1200'), scartoDetrazione:dec('75'),
   },
+  carichiFamiglia:{                       // TUIR, art. 12
+    redditoMassimoFamiliare:dec('2840.51'),        // c. 2
+    redditoMassimoFiglioGiovane:dec('4000'),       // c. 2, figli fino a 24 anni
+    etaFiglioGiovane:24,
+    coniuge:{                             // c. 1 lett. a) e b)
+      importoPieno:dec('800'), scarto:dec('110'), riferimento:dec('15000'),
+      importoFisso:dec('690'),
+      daTerzoRapporto:dec('40000'), aTerzoRapporto:dec('80000'), ampiezzaTerzoRapporto:dec('40000'),
+      /* lett. b): cinque scalini, l'unico punto in cui la detrazione risale */
+      scalini:[[dec('29000'),dec('29200'),dec('10')],[dec('29200'),dec('34700'),dec('20')],
+               [dec('34700'),dec('35000'),dec('30')],[dec('35000'),dec('35100'),dec('20')],
+               [dec('35100'),dec('35200'),dec('10')]],
+    },
+    figlio:{                              // c. 1 lett. c)
+      importo:dec('950'), soglia:dec('95000'), incremento:dec('15000'),
+      etaMinima:21, etaMassima:30,
+    },
+    ascendente:{                          // c. 1 lett. d)
+      importo:dec('750'), soglia:dec('80000'),
+    },
+  },
 };
 
 /* L'unica somma che oggi esiste. Il costo azienda ne sarà una
@@ -181,6 +202,136 @@ function ulterioreDetrazione(imponibile){
   return{quotaFissa:0n,rapporto:null,spettante:0n};
 }
 
+/* Art. 12 TUIR: le detrazioni per carichi di famiglia. Prende il
+   reddito complessivo (qui approssimato con l'imponibile) e il
+   nucleo dichiarato, e restituisce una valutazione per ciascun
+   familiare, nello stesso ordine: quanto spetta e, quando non
+   spetta, il CODICE del motivo. Il motivo in italiano lo scrive la
+   Riga: qui escono fatti, non frasi.
+
+   Il comma 4 governa i rapporti: si guarda il rapporto vero per
+   decidere se la detrazione compete, e lo si assume nelle prime
+   quattro cifre decimali per calcolarla. Le due cose sono
+   distinte, e invertirle azzererebbe detrazioni che spettano. */
+const NON_A_CARICO='familiareNonACarico';
+const FUORI_INTERVALLO='rapportoFuoriIntervallo';
+const SPETTA='spetta';
+
+function limiteRedditoFamiliare(tipo,eta){
+  const F=K.carichiFamiglia;
+  if(tipo!=='figlio')return F.redditoMassimoFamiliare;
+  if(eta===null||eta===undefined)return null;
+  return eta<=F.etaFiglioGiovane?F.redditoMassimoFiglioGiovane:F.redditoMassimoFamiliare;
+}
+
+function detrazioneConiuge(imponibile){
+  const C=K.carichiFamiglia.coniuge;
+  const scalino=C.scalini.find(([da,a])=>imponibile>da&&imponibile<=a);
+  const fissa=maggiorazione=>({importo:C.importoFisso,da:C.riferimento,a:C.daTerzoRapporto,
+    maggiorazione,scalinoDa:scalino?scalino[0]:null,scalinoA:scalino?scalino[1]:null});
+
+  if(imponibile<=C.riferimento){
+    const grezzo=div(imponibile,C.riferimento);
+    const termini={importo:C.importoPieno,scarto:C.scarto,riferimento:C.riferimento};
+    /* c. 4: rapporto zero, la detrazione non compete; rapporto uno,
+       la detrazione è 690 e la formula del primo rapporto non si usa. */
+    if(grezzo===0n)return{esito:FUORI_INTERVALLO,spettante:0n,rapporto:grezzo,
+      fascia:'primoRapporto',termini};
+    if(grezzo===S)return{esito:SPETTA,spettante:C.importoFisso,rapporto:S,
+      fascia:'rapportoUno',termini:{importo:C.importoFisso}};
+    const rapporto=troncaQuattro(grezzo);
+    return{esito:SPETTA,spettante:C.importoPieno-mul(C.scarto,rapporto),rapporto,
+      fascia:'primoRapporto',termini};
+  }
+  if(imponibile<=C.daTerzoRapporto){
+    const maggiorazione=scalino?scalino[2]:0n;
+    return{esito:SPETTA,spettante:C.importoFisso+maggiorazione,rapporto:null,
+      fascia:'fissa',termini:fissa(maggiorazione)};
+  }
+  const termini={importo:C.importoFisso,da:C.daTerzoRapporto,a:C.aTerzoRapporto,
+    ampiezza:C.ampiezzaTerzoRapporto};
+  if(imponibile<=C.aTerzoRapporto){
+    const grezzo=div(C.aTerzoRapporto-imponibile,C.ampiezzaTerzoRapporto);
+    if(grezzo===0n)return{esito:FUORI_INTERVALLO,spettante:0n,rapporto:grezzo,
+      fascia:'terzoRapporto',termini};
+    const rapporto=troncaQuattro(grezzo);
+    return{esito:SPETTA,spettante:mul(C.importoFisso,rapporto),rapporto,
+      fascia:'terzoRapporto',termini};
+  }
+  return{esito:FUORI_INTERVALLO,spettante:0n,rapporto:null,fascia:'terzoRapporto',termini};
+}
+
+/* Lett. c) e d) hanno la stessa forma: un importo per il rapporto
+   fra quanto resta della soglia e la soglia. Cambiano importo e
+   soglia — e la soglia dei figli cresce, quella degli ascendenti no. */
+function detrazioneSuSoglia(imponibile,importo,soglia,termini){
+  const grezzo=div(soglia-imponibile,soglia);
+  const fatti={...termini,importo,soglia};
+  if(grezzo<=0n||grezzo===S)
+    return{esito:FUORI_INTERVALLO,spettante:0n,rapporto:grezzo,fascia:null,termini:fatti};
+  const rapporto=troncaQuattro(grezzo);
+  return{esito:SPETTA,spettante:mul(importo,rapporto),rapporto,fascia:null,termini:fatti};
+}
+
+/* «In presenza di più figli CHE DANNO DIRITTO alla detrazione»:
+   il figlio di quindici anni non porta detrazione e non fa salire
+   la soglia per i fratelli. Contarlo sarebbe generoso e sbagliato. */
+function daDirittoAllaDetrazione(familiare){
+  if(familiare.tipo!=='figlio')return false;
+  const eta=familiare.eta;
+  if(eta===null||eta===undefined||eta==='')return false;
+  const F=K.carichiFamiglia.figlio;
+  if(eta<F.etaMinima||eta>=F.etaMassima)return false;
+  return dec(String(familiare.reddito??0))<=limiteRedditoFamiliare('figlio',eta);
+}
+
+const TIPI_FAMILIARE=['coniuge','figlio','ascendente'];
+function verificaNucleo(nucleo){
+  if(!Array.isArray(nucleo))throw new TypeError('Il nucleo familiare deve essere un array');
+  let coniugi=0;
+  for(const familiare of nucleo){
+    if(!familiare||!TIPI_FAMILIARE.includes(familiare.tipo))
+      throw new TypeError(`Tipo di familiare sconosciuto: ${familiare&&familiare.tipo}`);
+    if(familiare.tipo==='coniuge'&&++coniugi>1)
+      throw new RangeError('Si dichiara un solo coniuge a carico');
+    const eta=familiare.eta;
+    if(eta===null||eta===undefined||eta==='')continue;
+    if(!Number.isInteger(eta)||eta<0)throw new RangeError(`Età non valida: ${eta}`);
+  }
+}
+
+function detrazioniCarichiFamiglia(imponibile,nucleo=[]){
+  verificaNucleo(nucleo);
+  const F=K.carichiFamiglia;
+  const conDiritto=nucleo.filter(daDirittoAllaDetrazione).length;
+  const oltreIlPrimo=Math.max(0,conDiritto-1);
+  const sogliaFigli=F.figlio.soglia+F.figlio.incremento*BigInt(oltreIlPrimo);
+  return nucleo.map(familiare=>{
+    const tipo=familiare.tipo;
+    const eta=familiare.eta===undefined||familiare.eta===''?null:familiare.eta;
+    const redditoFamiliare=dec(String(familiare.reddito??0));
+    const limite=limiteRedditoFamiliare(tipo,eta);
+    const comune={tipoFamiliare:tipo,eta,redditoFamiliare,limiteRedditoFamiliare:limite};
+    const fuori=esito=>({...comune,esito,spettante:0n,rapporto:null,fascia:null,termini:{}});
+
+    /* Per i figli l'età viene prima del reddito: è la condizione
+       strutturale, e finché manca non si sa nemmeno quale limite
+       di reddito applicare. */
+    if(tipo==='figlio'){
+      if(eta===null)return fuori('etaNonDichiarata');
+      if(eta<F.figlio.etaMinima)return fuori('assorbitaAssegnoUnico');
+      if(eta>=F.figlio.etaMassima)return fuori('oltreTrentaAnni');
+    }
+    if(redditoFamiliare>limite)return fuori(NON_A_CARICO);
+    if(tipo==='coniuge')return{...comune,...detrazioneConiuge(imponibile)};
+    if(tipo==='figlio')return{...comune,...detrazioneSuSoglia(imponibile,
+      F.figlio.importo,sogliaFigli,
+      {sogliaBase:F.figlio.soglia,incremento:F.figlio.incremento,oltreIlPrimo})};
+    return{...comune,...detrazioneSuSoglia(imponibile,
+      F.ascendente.importo,F.ascendente.soglia,{})};
+  });
+}
+
 /* CAPIENZA — una detrazione abbatte l'imposta, non viene
    rimborsata. Qui si decide quanto se ne USA, e in che ordine:
    prima quella da lavoro dipendente, poi l'ulteriore. L'ordine
@@ -195,6 +346,32 @@ function applicaCapienza(lorda,spettanti){
     return uso;
   });
   return{usi,residua};
+}
+
+/* Le detrazioni per carichi di famiglia sono un blocco solo:
+   l'art. 12 le somma, non le mette in fila. Quando la capienza non
+   basta, la quota effettivamente usata si ripartisce in proporzione
+   a quanto spetta a ciascuno. La ripartizione è una convenzione di
+   PRESENTAZIONE — serve a poter mostrare una riga per familiare —
+   non una regola della norma: la norma non alloca niente a nessuno.
+   Consumarle in fila, invece, direbbe che il primo dichiarato ha
+   avuto tutto e l'ultimo niente, che non è vero di nessuno. */
+function ripartisciCapienza(spettanti,residua){
+  if(!spettanti.length)return{usi:[],residua};
+  const totale=spettanti.reduce((a,s)=>a+s,0n);
+  const disponibile=residua>0n?arrotondaCentesimi(residua):0n;
+  const uso=min(totale,disponibile);
+  if(uso===totale)return{usi:spettanti.slice(),residua:residua-uso};
+  /* Incapienti: quel che spetta supera l'imposta, quindi l'imposta
+     finisce. Resta a zero e non a un milionesimo di euro, altrimenti
+     farebbe scattare un'addizionale su un'imposta che non c'è più. */
+  const quota=totale===0n?0n:div(uso,totale);
+  const usi=spettanti.map(s=>arrotondaCentesimi(mul(s,quota)));
+  /* Il resto dell'arrotondamento va a chi la detrazione ce l'ha:
+     darlo a chi ha zero significherebbe inventargli un diritto. */
+  const ultimo=usi.reduce((scelto,_,i)=>spettanti[i]>0n?i:scelto,-1);
+  if(ultimo>=0)usi[ultimo]+=uso-usi.reduce((a,u)=>a+u,0n);
+  return{usi,residua:0n};
 }
 
 /* Le addizionali si pagano solo se l'IRPEF netta è dovuta: a
@@ -325,7 +502,13 @@ function calcola(ralInput,opzioni={}){
   /* 6. quanto se ne usa, e in che ordine */
   const capienza=applicaCapienza(lorda,[detrLav.spettante,detrUlt.spettante]);
   const[usoLav,usoUlt]=capienza.usi;
-  const netta=capienza.residua;
+
+  /* 6-bis. i carichi di famiglia consumano quel che resta
+     dell'imposta dopo l'art. 13: stessa capienza, un blocco solo. */
+  const famiglia=detrazioniCarichiFamiglia(I,opzioni.nucleo||[]);
+  const spettantiFamiglia=famiglia.map(f=>arrotondaCentesimi(f.spettante));
+  const ripartizione=ripartisciCapienza(spettantiFamiglia,capienza.residua);
+  const netta=ripartizione.residua;
 
   emetti('lorda','imposta','l199',I,-lorda,{scaglioni:K.irpef.scaglioni});
   emetti('detrlav','detrazione','tuir13',I,usoLav,{
@@ -344,6 +527,13 @@ function calcola(ralInput,opzioni={}){
       da:K.ulterioreDetrazione.da,pienoFinoA:K.ulterioreDetrazione.pienoFinoA,
       a:K.ulterioreDetrazione.a,
       ampiezzaDecrescente:K.ulterioreDetrazione.ampiezzaDecrescente});
+  const LETTERA={coniuge:'tuir12a',figlio:'tuir12c',ascendente:'tuir12d'};
+  famiglia.forEach((f,i)=>emetti(`detrfam${i+1}`,'detrazione',LETTERA[f.tipoFamiliare],I,
+    ripartizione.usi[i],{
+      tipoFamiliare:f.tipoFamiliare,eta:f.eta,esito:f.esito,fascia:f.fascia,
+      redditoFamiliare:f.redditoFamiliare,limiteRedditoFamiliare:f.limiteRedditoFamiliare,
+      spettante:spettantiFamiglia[i],capiente:ripartizione.usi[i]>=spettantiFamiglia[i],
+      rapporto:f.rapporto,termini:f.termini}));
 
   /* 7-8. addizionali locali */
   const dovute=netta>0n;
@@ -455,12 +645,19 @@ const CACHE_SOGLIE=new Map();
 const voceImporto=(r,id)=>r.voci.find(v=>v.id===id)?.importo||0;
 const centesimi=n=>Math.round(n*100)/100;
 function soglie(opzioni={}){
-  const geo=GEOGRAFIA.risolvi(opzioni.comune||'F205'),chiave=geo.comune.catastale;
+  const geo=GEOGRAFIA.risolvi(opzioni.comune||'F205');
+  const nucleo=opzioni.nucleo||[];
+  /* La chiave porta anche il nucleo: le detrazioni di famiglia
+     possono azzerare l'IRPEF netta, e allora un salto che esiste
+     per un contribuente solo non esiste più per una famiglia. */
+  const chiave=geo.comune.catastale+'|'+
+    nucleo.map(f=>`${f.tipo}${f.eta??''}:${f.reddito??0}`).join(',');
   if(CACHE_SOGLIE.has(chiave))return CACHE_SOGLIE.get(chiave);
   const risultato=[];
   for(const evento of EVENTI_NAZIONALI){
     const ral=evento.ral?evento.ral():ralOltreImponibile(evento.imponibile);
-    const sopra=calcola(ral,{comune:chiave}),sotto=calcola((Number(ral)-.01).toFixed(2),{comune:chiave});
+    const sopra=calcola(ral,{comune:geo.comune.catastale,nucleo}),
+      sotto=calcola((Number(ral)-.01).toFixed(2),{comune:geo.comune.catastale,nucleo});
     risultato.push({ral:Number(ral),imponibile:evento.imponibile??null,ambito:'nazionale',
       causa:evento.causa,delta:centesimi(sopra.kpi.nettoAnnuo-sotto.kpi.nettoAnnuo)});
   }
@@ -469,7 +666,8 @@ function soglie(opzioni={}){
     ['comunale',geo.comunale,geo.comune.nome,'addcom'],
   ])for(const confine of confiniRegola(regola)){
     const ral=ralOltreImponibile(confine.imponibile);
-    const sopra=calcola(ral,{comune:chiave}),sotto=calcola((Number(ral)-.01).toFixed(2),{comune:chiave});
+    const sopra=calcola(ral,{comune:geo.comune.catastale,nucleo}),
+      sotto=calcola((Number(ral)-.01).toFixed(2),{comune:geo.comune.catastale,nucleo});
     const delta=centesimi(voceImporto(sopra,id)-voceImporto(sotto,id));
     if(Math.abs(delta)<=.01)continue; // cambio di pendenza, non salto
     risultato.push({ral:Number(ral),imponibile:confine.imponibile,ambito,
@@ -508,7 +706,7 @@ if(typeof module!=='undefined'&&module.exports){
     dec,toNumber,
     /* le voci e i passi, uno per uno */
     contributiIvs,contributoAggiuntivo,imponibile,irpefLorda,
-    detrazioneLavoroDipendente,ulterioreDetrazione,applicaCapienza,
+    detrazioneLavoroDipendente,ulterioreDetrazione,detrazioniCarichiFamiglia,applicaCapienza,
     calcolaAddizionale,addizionaleRegionale,addizionaleComunale,sommaNonImponibile,
     trattamentoIntegrativo,riconcilia,sommeDichiarate};
 }

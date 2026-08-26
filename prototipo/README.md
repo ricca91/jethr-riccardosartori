@@ -3,10 +3,11 @@
 Una pagina che risponde a una domanda sola: di una retribuzione annua lorda, quanto resta
 in tasca, dove finisce il resto e perché.
 
-Si inserisce la RAL e si sceglie il domicilio fiscale con tre controlli dipendenti:
-**regione → provincia → comune**. Il profilo resta dichiarato — regole 2026, settore
-privato, tempo indeterminato, anno intero — mentre le addizionali coprono tutti i 7.894
-comuni Istat attivi nello snapshot del 21 febbraio 2026.
+Si inserisce la RAL, si sceglie il domicilio fiscale con tre controlli dipendenti
+(**regione → provincia → comune**) e si dichiarano, se ci sono, i **familiari a carico**.
+Il profilo resta dichiarato — regole 2026, settore privato, tempo indeterminato, anno
+intero — mentre le addizionali coprono tutti i 7.894 comuni Istat attivi nello snapshot
+del 21 febbraio 2026.
 
 ## I file
 
@@ -32,11 +33,18 @@ Wix Madefor Display sono incorporati nel file, quindi la pagina funziona anche o
 Vale anche per `come-ho-lavorato.html`, che porta la propria copia dei caratteri per
 restare apribile da sola.
 
+Il prototipo usa-e-getta del feedback visivo del pulsante **Calcola** si apre con
+`prototype-ral-feedback.html?variant=A`. Le varianti A, B e C si cambiano dalla barra
+in basso o con le frecce della tastiera.
+
 Il motore è uno script classico e non un modulo ES proprio per questo: i moduli non si
 caricano da `file://`, gli script classici sì.
 
-Lo stato sta nell'URL (`?ral=&m=&c=&calc=1`), incluso il codice catastale del comune,
-quindi ogni schermata è condivisibile.
+Lo stato sta nell'URL (`?ral=&m=&c=&n=&calc=1`), incluso il codice catastale del comune e
+il nucleo familiare, quindi ogni schermata è condivisibile. Il parametro `n` porta un
+familiare per token — `c` coniuge, `f22` figlio di 22 anni, `a` ascendente convivente,
+`f22r1500` con il suo reddito — e **non compare** se non c'è nessun familiare dichiarato:
+senza nucleo la query string è quella di prima.
 
 ## Come si provano i numeri
 
@@ -72,8 +80,8 @@ chiude.
 Aritmetica decimale a virgola fissa su `BigInt`, scala 1e-8, mai virgola mobile binaria.
 Tredici passi in ordine vincolante: contributi, imponibile, IRPEF lorda per scaglioni,
 detrazioni con la capienza, IRPEF netta, addizionali — dovute solo se l'IRPEF netta è
-positiva — e integrazioni di legge. Troncamento a quattro decimali solo sui rapporti
-dell'art. 13, dove la norma lo impone.
+positiva — e integrazioni di legge. Troncamento a quattro decimali sui rapporti dell'art. 13
+e su quelli dell'art. 12, dove la norma lo impone (art. 12 c. 4, art. 13 c. 6).
 
 Versione delle regole: `regole-2026-v2`. Fonti primarie, tutte citate nella pagina:
 leggi di bilancio 2025 e 2026, TUIR, circolari INPS, Istat e MEF. Le pubblicazioni
@@ -99,13 +107,41 @@ passa quel risultato ad `applicaMensilita()`, che divide il netto annuo già cal
 non calcolo. Se richiedessero un ricalcolo, la pagina direbbe il contrario di quello che
 afferma.
 
-`soglie({ comune: codiceCatastale })` restituisce soltanto le discontinuità effettive:
+## Il nucleo familiare
+
+`calcola(ral, { comune, nucleo })` accetta un nucleo come lista di familiari —
+`{ tipo: 'coniuge' | 'figlio' | 'ascendente', eta, reddito }` — e ne emette **una Voce per
+persona** (`detrfam1`, `detrfam2`, …), non una voce sola né una per tipo. È la scelta uscita
+dal prototipo del [#35](https://github.com/ricca91/jethr-riccardosartori/issues/35): la
+pagina deve poter dire *perché* una detrazione è zero, e per dirlo serve una riga per la
+persona a cui non spetta.
+
+Il motore emette un **codice** di esito — `spetta`, `assorbitaAssegnoUnico`,
+`oltreTrentaAnni`, `etaNonDichiarata`, `familiareNonACarico`, `rapportoFuoriIntervallo` — e
+la frase in italiano nasce in `righe.js`, che è dove vivono le parole. Ogni Riga porta anche
+una `nota`: la stessa cosa della formula, in poche parole, per la colonna «perché» della
+tabella del nucleo.
+
+Due punti dell'art. 12 sono facili da sbagliare e sono provati apposta: la soglia dei figli
+cresce di 15.000 € solo per i figli **che danno diritto** alla detrazione (un quindicenne non
+la alza), e il comma 4 vuole che il rapporto si guardi *vero* per decidere se la detrazione
+compete e *troncato a quattro decimali* per calcolarla.
+
+Quando la capienza non basta, la quota usata si ripartisce **in proporzione** a quanto spetta
+a ciascuno. È una convenzione di presentazione: l'art. 12 somma e sottrae, non alloca niente
+a nessuno. Consumarle in fila direbbe che il primo dichiarato ha avuto tutto e l'ultimo
+niente, che non è vero di nessuno.
+
+`soglie({ comune: codiceCatastale, nucleo })` restituisce soltanto le discontinuità effettive:
 ogni elemento dichiara `ambito` (`nazionale`, `regionale` o `comunale`), imponibile,
 RAL, causa e variazione del netto. Le soglie normative sull'imponibile vengono convertite
 nella prima RAL che le supera usando contributi e arrotondamenti del motore; i normali
 cambi di scaglione progressivo, che modificano la pendenza ma non creano un salto, non
 sono inclusi. Senza opzioni il default resta Milano per compatibilità. La cache è separata
-per codice catastale.
+per codice catastale e per nucleo dichiarato: le detrazioni di famiglia possono azzerare
+l'IRPEF netta, e un salto che esiste per un contribuente solo può non esistere per una
+famiglia — a Milano il gradino da 184 € dell'esenzione comunale sparisce con tre familiari
+a carico, perché da entrambi i lati della soglia l'imposta è già zero.
 
 ## Come si pubblica
 

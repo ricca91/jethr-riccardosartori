@@ -1139,6 +1139,28 @@ body.jet-base{background:var(--jet-surface-ivory);margin:0;padding-bottom:104px}
 .dirty{display:none;align-items:center;gap:8px;font-size:14px;color:var(--jet-warning-ink)}
 .is-dirty .dirty{display:flex}
 
+/* nucleo familiare: una riga per persona, l'età in colonna */
+.nucleo{margin-top:22px;padding-top:20px;border-top:1px solid var(--jet-border-subtle)}
+.nucleo-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+  flex-wrap:wrap;margin-bottom:14px}
+.nucleo-tit{font-size:11.5px;font-weight:700;letter-spacing:.9px;text-transform:uppercase;
+  color:var(--jet-text-muted)}
+.nucleo-vuoto{margin:0;font-size:14px;color:var(--jet-text-regular);max-width:70ch}
+.nucleo-azioni{margin-top:12px}
+.nucleo-tab td{vertical-align:middle}
+.nucleo-in{height:40px;font-size:14px;padding-block:0}
+.nucleo-eta{width:86px}
+.nucleo-red{width:118px}
+.nucleo-imp{white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:600}
+.nucleo-perche{font-size:13px;color:var(--jet-text-regular);max-width:36ch}
+.nucleo-x{border:0;background:none;cursor:pointer;font-size:14px;color:var(--jet-text-muted);
+  padding:6px 8px;border-radius:6px;line-height:1}
+.nucleo-x:hover{background:var(--jet-surface-muted);color:var(--jet-text)}
+.nucleo-x:focus-visible{outline:2px solid var(--jet-black);outline-offset:2px}
+.nucleo-nota{margin-top:14px}
+.nucleo-nota .jet-alert-text{font-size:13px;line-height:1.55}
+@media(max-width:700px){.nucleo-perche{max-width:none}}
+
 /* sezioni impilate */
 .sec{scroll-margin-top:96px}
 .sec-head{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-bottom:6px}
@@ -1294,19 +1316,33 @@ const LIMITI=[
   ['«RAL» non è una base legale autonoma','È una convenzione retributiva. Il calcolo assume RAL = imponibile previdenziale = imponibile fiscale prima dei contributi, senza componenti variabili, benefit o rimborsi.'],
   ['Competenza, non cassa','È il carico maturato sulla RAL 2026, non il denaro trattenuto nei cedolini del 2026: le addizionali si pagano a rate dopo il conguaglio. Per questo la cifra mensile è una media, non l\'importo di una busta paga.'],
   ['Sopra 122.295 € si assume la prima iscrizione dal 1996','Il massimale contributivo vale solo per chi è privo di anzianità al 31/12/1995. È l\'unico punto in cui la sola RAL non basta più.'],
+  ['Le detrazioni di famiglia valgono per l\'anno intero','L\'art. 12 c. 3 le rapporta a mese: qui si assume che le condizioni valgano per tutti i dodici. La quota degli ascendenti è assunta intera e non ripartita con altri aventi diritto, e il reddito complessivo del dichiarante è approssimato con l\'imponibile IRPEF. Restano fuori le maggiorazioni per figli con disabilità (art. 12 c. 1 lett. c) e il caso dei familiari residenti all\'estero di contribuente extra-UE (art. 12 c. 2-bis).'],
 ];
 const FAQ=[
   ['Perché il netto mensile non coincide con la mia busta paga?','Il calcolo è annuale e di competenza. Le addizionali vengono trattenute a rate nell\'anno successivo al conguaglio, la tredicesima non beneficia delle stesse detrazioni mensili e il conguaglio di fine anno riequilibra tutto. Per questo il numero è etichettato <b>media</b>, mai «importo del cedolino».'],
   ['Perché scegliere 12, 13 o 14 mensilità non cambia il netto annuo?','Perché non è un dato di calcolo: è solo il divisore con cui si presenta lo stesso netto annuo. Le trattenute non cambiano. Puoi verificarlo qui sopra — cambiando il selettore il netto annuo resta identico e si muove solo la media. Se cambiasse, sarebbe un errore.'],
   ['Perché a volte un euro lordo in più fa <em>scendere</em> il netto?',stato=>{
     const geo=GEOGRAFIA_ITALIA.risolvi(stato.comune);
-    const locali=soglie({comune:stato.comune}).filter(s=>s.ambito==='comunale');
-    if(!locali.length)return `Alcune misure sono esenzioni con soglia secca, non franchigie. Per ${esc(geo.comune.nome)} lo snapshot non contiene una discontinuità comunale generale; restano le soglie nazionali e le eventuali soglie regionali.`;
+    const comunali=nucleo=>soglie({comune:stato.comune,nucleo}).filter(s=>s.ambito==='comunale');
+    const locali=comunali(stato.nucleo);
+    if(!locali.length){
+      /* Un salto che c'è per un contribuente solo può non esserci
+         per una famiglia: se le detrazioni azzerano l'IRPEF netta
+         da entrambi i lati della soglia, non c'è addizionale da
+         perdere. Dirlo è diverso dal dire che il comune non ha
+         esenzione, e la pagina non deve confondere le due cose. */
+      const senzaNucleo=comunali([]);
+      if(stato.nucleo.length&&senzaNucleo.length)
+        return `Alcune misure locali sono esenzioni con soglia secca, non franchigie. Per ${esc(geo.comune.nome)} il salto esiste — alla RAL di ${eur(senzaNucleo[0].ral)} vale ${eur(Math.abs(senzaNucleo[0].delta))} — ma <b>non per te</b>: con i familiari a carico che hai dichiarato le detrazioni azzerano l’IRPEF netta da entrambi i lati della soglia, e senza IRPEF netta non c’è addizionale da perdere.`;
+      return `Alcune misure sono esenzioni con soglia secca, non franchigie. Per ${esc(geo.comune.nome)} lo snapshot non contiene una discontinuità comunale generale; restano le soglie nazionali e le eventuali soglie regionali.`;
+    }
     const s=locali[0];
     return `Perché alcune misure locali sono esenzioni con soglia secca, non franchigie: superata la soglia si perdono per intero. Per ${esc(geo.comune.nome)}, alla RAL di ${eur(s.ral)}, il salto dell’addizionale comunale vale ${eur(Math.abs(s.delta))} sul netto annuo.`;
   }],
   ['Quali sono i contributi a carico del dipendente?','Il contributo IVS del 9,19% sull\'imponibile previdenziale, più un contributo aggiuntivo dell\'1% sulla quota che supera la prima fascia pensionabile (56.224 € nel 2026). Sopra il massimale di 122.295 € entrambi si fermano: è il motivo per cui l\'aliquota contributiva effettiva scende oltre quella soglia.'],
-  ['Cosa non è incluso nel calcolo?','TFR, costo azienda e contributi del datore, INAIL, CCNL e fondi di solidarietà, fondi sanitari e previdenza complementare, familiari a carico, altri redditi, oneri deducibili e detraibili, benefit, premi e agevolazioni personali. Nessuno di questi è ricavabile dalla sola RAL: chiederli significherebbe un modulo lungo prima del primo risultato.'],
+  ['Ho un figlio di 15 anni: perché non compare nessuna detrazione?','Perché dal 2022, sotto i <b>21 anni</b>, la detrazione per figli a carico non esiste più: è assorbita dall\'<b>Assegno Unico e Universale</b>, che si chiede all\'INPS e non passa dalla busta paga. La detrazione dell\'art. 12 TUIR riprende dai 21 anni compiuti e si ferma ai 30. Non è un buco del calcolatore: è dove la norma ha spostato il sostegno.'],
+  ['Quando un familiare è «a carico»?','Quando il suo reddito complessivo non supera <b>2.840,51 €</b> l\'anno, elevati a <b>4.000 €</b> per i figli fino a 24 anni. Sopra quella soglia il familiare non è a carico e la detrazione non spetta, anche se convive. Gli «altri familiari» dell\'art. 12 sono oggi i soli <b>ascendenti conviventi</b>: genitori e nonni che vivono con te.'],
+  ['Cosa non è incluso nel calcolo?','TFR, costo azienda e contributi del datore, INAIL, CCNL e fondi di solidarietà, fondi sanitari e previdenza complementare, altri redditi, oneri deducibili e detraibili, benefit, premi e agevolazioni personali. I familiari a carico si dichiarano nel modulo qui sopra; tutto il resto non è ricavabile dalla sola RAL, e chiederlo significherebbe un modulo lungo prima del primo risultato.'],
   ['Da dove vengono le regole?','Solo da fonti primarie: Istat per i comuni attivi, MEF per le addizionali locali, leggi di bilancio, TUIR e circolari INPS. Ogni voce del dettaglio rimanda al riferimento ufficiale applicato.'],
 ];
 const SEZIONI=[['risultato','Risultato'],['flusso','Il flusso'],['dettaglio','Il dettaglio'],['metodo','Metodo e fonti'],['faq','Domande frequenti']];
@@ -1336,6 +1372,104 @@ function hero(st){
     <a class="worklink" href="la-storia.html">La storia: cosa è successo dopo la pubblicazione →</a>
   </div>`;
 }
+/* ============================================================
+   NUCLEO FAMILIARE — una riga per familiare. L'età è il dato che
+   decide, quindi è una colonna, non un dettaglio nascosto; e la
+   colonna «perché» dice sempre come va a finire, anche quando la
+   detrazione è zero.
+   ============================================================ */
+const TIPO_LETTERA={coniuge:'c',figlio:'f',ascendente:'a'};
+const LETTERA_TIPO={c:'coniuge',f:'figlio',a:'ascendente'};
+const NOME_FAMILIARE={coniuge:'Coniuge',figlio:'Figlio',ascendente:'Ascendente convivente'};
+const MAX_FAMILIARI=12;
+const serializzaNucleo=nucleo=>nucleo.map(f=>TIPO_LETTERA[f.tipo]+
+  (f.eta===null||f.eta===undefined?'':f.eta)+(f.reddito>0?'r'+f.reddito:'')).join('.');
+function deserializzaNucleo(testo){
+  let coniugi=0;
+  return String(testo||'').split('.').map(t=>{
+    const m=/^([cfa])(\d{1,3})?(?:r(\d{1,7}))?$/.exec(t);
+    if(!m)return null;
+    const tipo=LETTERA_TIPO[m[1]];
+    if(tipo==='coniuge'&&++coniugi>1)return null;   // l'art. 12 ne conosce uno solo
+    return{tipo,eta:m[2]===undefined?null:Number(m[2]),reddito:m[3]?Number(m[3]):0};
+  }).filter(Boolean).slice(0,MAX_FAMILIARI);
+}
+
+const NUCLEO_LIMITI=`<b>Quando un familiare è «a carico».</b>
+  Se il suo reddito supera <b>2.840,51 €</b> non è a carico e la detrazione non spetta;
+  per i figli fino a 24 anni il limite è <b>4.000 €</b>.
+  <b>Sotto i 21 anni</b> la detrazione per figli non esiste: dal 2022 è assorbita
+  dall’<b>Assegno Unico</b>, che si chiede all’INPS e non passa dalla busta paga.
+  Riprende dai 21 anni compiuti e si ferma ai 30. Gli <b>altri familiari</b> dell’art. 12
+  sono oggi i soli <b>ascendenti conviventi</b> — genitori e nonni che vivono con te.
+  Come le altre, queste detrazioni <b>abbattono l’IRPEF e non vengono rimborsate</b>:
+  se l’imposta finisce, la parte eccedente si perde.`;
+const NUCLEO_PERIMETRO=`<b>Fuori perimetro, dichiarato.</b> Non sono calcolate le
+  <b>maggiorazioni per figli con disabilità</b> (art. 12 c. 1 lett. c) né il caso dei
+  <b>familiari residenti all’estero di contribuente extra-UE</b> (art. 12 c. 2-bis):
+  servono documenti che la sola RAL non porta. Il <b>reddito complessivo</b> del
+  dichiarante è approssimato con l’imponibile IRPEF, le detrazioni sono calcolate per
+  l’<b>anno intero</b> (l’art. 12 c. 3 le rapporta a mese) e la quota degli ascendenti
+  è assunta <b>intera</b>, non ripartita con altri aventi diritto.`;
+
+function nucleoBlocco(stato){
+  /* I numeri si mostrano solo se il risultato a schermo è stato
+     calcolato per QUESTO nucleo: altrimenti la tabella direbbe una
+     cifra e la catena un'altra. */
+  const combacia=stato.res&&serializzaNucleo(stato.nucleo)===stato.nucleoCalcolato;
+  const voci=combacia?stato.res.voci.filter(v=>/^detrfam\d+$/.test(v.id)):[];
+  const righe=combacia?componiRighe(stato.res.voci).filter(r=>/^detrfam\d+$/.test(r.id)):[];
+  const cella=(f,i)=>{
+    const voce=voci[i],riga=righe[i];
+    if(!voce)return['<span class="jet-muted">—</span>','<span class="jet-muted">premi Calcola</span>'];
+    return[eur(voce.importo),
+      esc(riga.nota)+(voce.capiente?'':' · <b>capienza esaurita</b>')];
+  };
+  const riga=(f,i)=>{
+    const[importo,perche]=cella(f,i);
+    return `<tr>
+      <td><select class="jet-select nucleo-in" data-nucleo-tipo="${i}"
+          aria-label="Tipo di familiare, riga ${i+1}">
+        ${Object.entries(NOME_FAMILIARE).map(([k,n])=>
+          `<option value="${k}" ${f.tipo===k?'selected':''}>${esc(n)}</option>`).join('')}
+      </select></td>
+      <td>${f.tipo==='figlio'
+        ?`<input class="jet-input nucleo-in nucleo-eta" id="nucleo-eta-${i}" data-nucleo-eta="${i}"
+            type="text" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="anni"
+            aria-label="Età del figlio, riga ${i+1}" value="${f.eta===null?'':f.eta}">`
+        :'<span class="jet-muted">non rileva</span>'}</td>
+      <td><input class="jet-input nucleo-in nucleo-red" id="nucleo-reddito-${i}" data-nucleo-reddito="${i}"
+          type="text" inputmode="numeric" maxlength="7" autocomplete="off" placeholder="0"
+          aria-label="Reddito del familiare, riga ${i+1}" value="${f.reddito>0?f.reddito:''}"></td>
+      <td class="num nucleo-imp">${importo}</td>
+      <td class="nucleo-perche">${perche}</td>
+      <td><button class="nucleo-x" data-nucleo-rimuovi="${i}"
+        aria-label="Togli il familiare della riga ${i+1}">✕</button></td>
+    </tr>`;
+  };
+  return `<div class="nucleo">
+    <div class="nucleo-head">
+      <span class="nucleo-tit">Nucleo familiare</span>
+      <span class="jet-body-xs jet-muted">Facoltativo — abbatte l’IRPEF, non i contributi</span>
+    </div>
+    ${stato.nucleo.length?`<div class="jet-table-wrap"><table class="jet-table nucleo-tab">
+      <caption class="sr">Familiari a carico dichiarati</caption>
+      <thead><tr><th>Familiare</th><th>Età</th><th>Suo reddito</th>
+        <th class="num">Detrazione</th><th>Perché</th><th><span class="sr">Azioni</span></th></tr></thead>
+      <tbody>${stato.nucleo.map(riga).join('')}</tbody></table></div>`
+      :`<p class="nucleo-vuoto">Nessun familiare dichiarato: il risultato è quello di un
+         contribuente senza carichi di famiglia. Per i figli conta l’<b>età</b>, non il numero.</p>`}
+    <div class="nucleo-azioni">
+      <button class="jet-btn jet-btn--secondary jet-btn--s" id="nucleo-aggiungi"
+        ${stato.nucleo.length>=MAX_FAMILIARI?'disabled':''}>+ Aggiungi familiare</button>
+    </div>
+    <div class="jet-alert jet-alert--info nucleo-nota"><div class="jet-alert-body">
+      <div class="jet-alert-text">${NUCLEO_LIMITI}</div></div></div>
+    <div class="jet-alert jet-alert--warning nucleo-nota"><div class="jet-alert-body">
+      <div class="jet-alert-text">${NUCLEO_PERIMETRO}</div></div></div>
+  </div>`;
+}
+
 function form(st){
   const err=st.errore?`<p class="jet-help" style="color:var(--jet-danger-ink)" role="alert">${esc(st.errore)}</p>`:'';
   const province=GEOGRAFIA_ITALIA.province(st.regione),comuni=GEOGRAFIA_ITALIA.comuni(st.provincia);
@@ -1370,11 +1504,12 @@ function form(st){
       <div class="jet-field"><label class="jet-label" for="comune">Comune</label>
         <select class="jet-select" id="comune">${opts(comuni,st.comune,x=>x.nome)}</select></div>
     </div>
+    ${nucleoBlocco(st)}
     <hr class="jet-divider" style="margin:24px 0">
     <div class="calcrow">
       <button class="jet-btn jet-btn--primary jet-btn--lg" id="go">Calcola</button>
       <span class="dirty"><span class="jet-dot" style="background:var(--jet-warning)"></span>
-        Hai cambiato la RAL: premi <b>Calcola</b> per aggiornare.</span>
+        Hai cambiato i dati del calcolo: premi <b>Calcola</b> per aggiornare.</span>
       ${st.res?`<button class="jet-btn jet-btn--tertiary" id="reset" style="margin-left:auto">Azzera</button>`:''}
     </div>
   </div>`;
@@ -1493,6 +1628,10 @@ function chain(res,st){
   rigaVoce('−','lorda');
   rigaVoce('+','detrlav');
   rigaVoce('+','detrult');
+  /* Una riga per familiare, dentro il gruppo IRPEF e non in un
+     gruppo suo: sono detrazioni dell'imposta, e staccarle
+     lascerebbe «IRPEF netta» orfana del suo blocco. */
+  for(const v of res.voci.filter(x=>/^detrfam\d+$/.test(x.id)))row('+',r(v.id).titolo,v.importo,v);
   row('=','IRPEF netta',res.irpefNetta,null,'sub');
   grp('Addizionali locali');
   rigaVoce('−','addreg');
@@ -1668,6 +1807,7 @@ function vuoto(st){
 const GEO_DEFAULT=GEOGRAFIA_ITALIA.risolvi('F205');
 const st={ralRaw:'35.000',mensilita:13,regione:GEO_DEFAULT.provincia.regione,
   provincia:GEO_DEFAULT.comune.provincia,comune:GEO_DEFAULT.comune.catastale,
+  nucleo:[],nucleoCalcolato:null,
   aperta:null,attiva:'risultato',res:null,errore:null,dirty:false,eggPending:false};
 
 function fromURL(){
@@ -1675,6 +1815,7 @@ function fromURL(){
   if(p.get('c')){try{const g=GEOGRAFIA_ITALIA.risolvi(p.get('c'));
     st.regione=g.provincia.regione;st.provincia=g.comune.provincia;st.comune=g.comune.catastale;}catch{}}
   if(p.get('ral'))st.ralRaw=p.get('ral');
+  if(p.get('n'))st.nucleo=deserializzaNucleo(p.get('n'));
   const mensilita=Number(p.get('m'));
   if(MENSILITA_AMMESSE.includes(mensilita))st.mensilita=mensilita;
   if(p.get('calc')==='1')commit(true);
@@ -1682,6 +1823,10 @@ function fromURL(){
 function toURL(){
   const p=new URLSearchParams();
   p.set('ral',st.ralRaw);p.set('m',String(st.mensilita));p.set('c',st.comune);
+  /* Senza familiari dichiarati la query string resta quella di
+     prima: la funzione è additiva anche nell'URL. */
+  const nucleo=serializzaNucleo(st.nucleo);
+  if(nucleo)p.set('n',nucleo);
   if(st.res)p.set('calc','1');
   history.replaceState(null,'','?'+p.toString()+(st.res?'#risultato':''));
 }
@@ -1697,7 +1842,8 @@ function commit(silenzioso){
   else if(Number(v)<0){st.errore='La RAL non può essere negativa.';st.res=null;}
   else if(Number(v)===4700000){st.res=null;st.dirty=false;st.eggPending=true;}
   else if(Number(v)>1000000){st.errore='Il calcolo è disponibile fino a una RAL di 1.000.000 €.';st.res=null;}
-  else{st.res=applicaMensilita(calcola(v,{comune:st.comune}),st.mensilita);st.dirty=false;st.eggPending=false;
+  else{st.res=applicaMensilita(calcola(v,{comune:st.comune,nucleo:st.nucleo}),st.mensilita);
+    st.nucleoCalcolato=serializzaNucleo(st.nucleo);st.dirty=false;st.eggPending=false;
     if(!st.aperta)st.aperta='ivs';}   // mostra subito a cosa serve il pannello
   if(!silenzioso){
     render();
@@ -1716,6 +1862,8 @@ function segnaFuoco(){
   if(b)return `[data-band="${b.dataset.band}"]`;
   const m=a.closest('[data-m]');
   if(m)return `[data-m="${m.dataset.m}"]`;
+  const n=a.closest('[data-nucleo-rimuovi]');
+  if(n)return `[data-nucleo-rimuovi="${n.dataset.nucleoRimuovi}"]`;
   return a.id?'#'+a.id:null;
 }
 function rendiFuoco(sel){
@@ -1750,12 +1898,38 @@ function render(keepScroll){
   const egg=document.getElementById('egg');
   if(egg&&st.eggPending){egg.showModal();st.eggPending=false;}
 }
+function segnaSporco(campo){
+  if(!st.res)return;
+  st.dirty=true;
+  campo.closest('.jet-card')?.classList.add('is-dirty');
+}
 document.addEventListener('input',e=>{
-  if(e.target.id!=='ral')return;
-  st.ralRaw=e.target.value;
-  if(st.res){st.dirty=true;e.target.closest('.jet-card')?.classList.add('is-dirty');}
+  const d=e.target.dataset||{};
+  if(e.target.id==='ral'){st.ralRaw=e.target.value;return segnaSporco(e.target);}
+  /* Età e reddito non ridisegnano la pagina a ogni cifra: il campo
+     resta quello che l'utente sta scrivendo, cursore compreso. */
+  if(d.nucleoEta!==undefined){
+    const cifre=e.target.value.replace(/\D/g,'').slice(0,3);
+    if(cifre!==e.target.value)e.target.value=cifre;
+    st.nucleo[Number(d.nucleoEta)].eta=cifre===''?null:Number(cifre);
+    return segnaSporco(e.target);
+  }
+  if(d.nucleoReddito!==undefined){
+    const cifre=e.target.value.replace(/\D/g,'').slice(0,7);
+    if(cifre!==e.target.value)e.target.value=cifre;
+    st.nucleo[Number(d.nucleoReddito)].reddito=cifre===''?0:Number(cifre);
+    return segnaSporco(e.target);
+  }
 });
 document.addEventListener('change',e=>{
+  const indice=e.target.dataset&&e.target.dataset.nucleoTipo;
+  if(indice!==undefined&&indice!==null){
+    const familiare=st.nucleo[Number(indice)];
+    familiare.tipo=e.target.value;
+    if(familiare.tipo!=='figlio')familiare.eta=null;   // l'età non rileva per gli altri
+    if(st.res)st.dirty=true;
+    return render(true);
+  }
   if(!['regione','provincia','comune'].includes(e.target.id))return;
   if(e.target.id==='regione'){
     st.regione=Number(e.target.value);
@@ -1777,10 +1951,20 @@ document.addEventListener('click',e=>{
     document.getElementById(a.dataset.anchor)?.scrollIntoView({
       behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});
     return;}
+  const familiare=e.target.closest('#nucleo-aggiungi,[data-nucleo-rimuovi]');
+  if(familiare){
+    if(familiare.id==='nucleo-aggiungi'){
+      if(st.nucleo.length>=MAX_FAMILIARI)return;
+      st.nucleo.push({tipo:'figlio',eta:null,reddito:0});
+    }else st.nucleo.splice(Number(familiare.dataset.nucleoRimuovi),1);
+    if(st.res)st.dirty=true;
+    return render(true);
+  }
   const t=e.target.closest('#go,#reset,[data-m],[data-voce],[data-band]');
   if(!t)return;
   if(t.id==='go')return commit();
-  if(t.id==='reset'){st.res=null;st.ralRaw='';st.aperta=null;st.errore=null;return render();}
+  if(t.id==='reset'){st.res=null;st.ralRaw='';st.aperta=null;st.errore=null;
+    st.nucleo=[];st.nucleoCalcolato=null;return render();}
   if(t.hasAttribute('data-m')){
     st.mensilita=Number(t.dataset.m);
     // Mensilita' e' presentazione, non calcolo: si divide il netto annuo
