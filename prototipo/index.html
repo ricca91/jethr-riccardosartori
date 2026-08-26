@@ -1159,7 +1159,29 @@ body.jet-base{background:var(--jet-surface-ivory);margin:0;padding-bottom:104px}
 .nucleo-x:focus-visible{outline:2px solid var(--jet-black);outline-offset:2px}
 .nucleo-nota{margin-top:14px}
 .nucleo-nota .jet-alert-text{font-size:13px;line-height:1.55}
-@media(max-width:700px){.nucleo-perche{max-width:none}}
+/* Su schermo stretto la tabella si impila: sei colonne che scorrono
+   in orizzontale nasconderebbero proprio la colonna «perché», che è
+   la ragione per cui questa tabella esiste. */
+@media(max-width:760px){
+  /* .jet-table porta un min-width di 560px per far scorrere le
+     tabelle larghe: qui non serve, le righe diventano schede. */
+  .nucleo-tab,.nucleo-tab tbody,.nucleo-tab tr,.nucleo-tab td{display:block;width:auto;min-width:0}
+  .nucleo .jet-table-wrap{overflow:visible;border:0;border-radius:0;background:none}
+  .nucleo-tab thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .nucleo-tab tr{position:relative;background:var(--jet-white);border:1px solid var(--jet-border);
+    border-radius:12px;padding:8px 44px 8px 14px;margin-bottom:10px}
+  .nucleo-tab tr:hover{background:var(--jet-white)}
+  .nucleo-tab td{border:0;padding:7px 0;display:flex;align-items:center;
+    justify-content:space-between;gap:14px;text-align:right}
+  .nucleo-tab td::before{content:attr(data-etichetta);flex:none;text-align:left;
+    font-size:11.5px;font-weight:600;letter-spacing:.4px;text-transform:uppercase;
+    color:var(--jet-text-muted)}
+  .nucleo-tab td:last-child{position:absolute;top:8px;right:8px;padding:0;display:block}
+  .nucleo-tab td:last-child::before{content:none}
+  .nucleo-perche{max-width:none}
+  .nucleo-eta,.nucleo-red{width:130px}
+  .nucleo-tab .jet-select{width:auto;min-width:190px}
+}
 
 /* sezioni impilate */
 .sec{scroll-margin-top:96px}
@@ -1428,21 +1450,21 @@ function nucleoBlocco(stato){
   const riga=(f,i)=>{
     const[importo,perche]=cella(f,i);
     return `<tr>
-      <td><select class="jet-select nucleo-in" data-nucleo-tipo="${i}"
+      <td data-etichetta="Familiare"><select class="jet-select nucleo-in" data-nucleo-tipo="${i}"
           aria-label="Tipo di familiare, riga ${i+1}">
         ${Object.entries(NOME_FAMILIARE).map(([k,n])=>
           `<option value="${k}" ${f.tipo===k?'selected':''}>${esc(n)}</option>`).join('')}
       </select></td>
-      <td>${f.tipo==='figlio'
+      <td data-etichetta="Età">${f.tipo==='figlio'
         ?`<input class="jet-input nucleo-in nucleo-eta" id="nucleo-eta-${i}" data-nucleo-eta="${i}"
             type="text" inputmode="numeric" maxlength="3" autocomplete="off" placeholder="anni"
             aria-label="Età del figlio, riga ${i+1}" value="${f.eta===null?'':f.eta}">`
         :'<span class="jet-muted">non rileva</span>'}</td>
-      <td><input class="jet-input nucleo-in nucleo-red" id="nucleo-reddito-${i}" data-nucleo-reddito="${i}"
+      <td data-etichetta="Suo reddito"><input class="jet-input nucleo-in nucleo-red" id="nucleo-reddito-${i}" data-nucleo-reddito="${i}"
           type="text" inputmode="numeric" maxlength="7" autocomplete="off" placeholder="0"
           aria-label="Reddito del familiare, riga ${i+1}" value="${f.reddito>0?f.reddito:''}"></td>
-      <td class="num nucleo-imp">${importo}</td>
-      <td class="nucleo-perche">${perche}</td>
+      <td class="num nucleo-imp" data-etichetta="Detrazione">${importo}</td>
+      <td class="nucleo-perche" data-etichetta="Perché">${perche}</td>
       <td><button class="nucleo-x" data-nucleo-rimuovi="${i}"
         aria-label="Togli il familiare della riga ${i+1}">✕</button></td>
     </tr>`;
