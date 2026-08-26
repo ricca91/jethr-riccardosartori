@@ -1684,7 +1684,11 @@ function toURL(){
   const p=new URLSearchParams();
   p.set('ral',st.ralRaw);p.set('m',String(st.mensilita));p.set('c',st.comune);
   if(st.res)p.set('calc','1');
-  history.replaceState(null,'','?'+p.toString());
+  history.replaceState(null,'','?'+p.toString()+(st.res?'#risultato':''));
+}
+function scrollAlRisultato(){
+  document.getElementById('risultato')?.scrollIntoView({
+    behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});
 }
 function commit(silenzioso){
   st.errore=null;
@@ -1696,7 +1700,10 @@ function commit(silenzioso){
   else if(Number(v)>1000000){st.errore='Il calcolo è disponibile fino a una RAL di 1.000.000 €.';st.res=null;}
   else{st.res=applicaMensilita(calcola(v,{comune:st.comune}),st.mensilita);st.dirty=false;st.eggPending=false;
     if(!st.aperta)st.aperta='ivs';}   // mostra subito a cosa serve il pannello
-  if(!silenzioso)render();
+  if(!silenzioso){
+    render();
+    if(st.res)scrollAlRisultato();
+  }
 }
 /* Prima di ridisegnare annoto CHI aveva il fuoco, in modo da restituirglielo
    dopo. Senza questo, chi usa la tastiera torna a inizio pagina ogni volta
@@ -1803,6 +1810,7 @@ document.addEventListener('keydown',e=>{
     b.dispatchEvent(new MouseEvent('click',{bubbles:true}));}
 });
 fromURL();render();
+if(location.hash==='#risultato'&&st.res)scrollAlRisultato();
 
 </script>
 </body>
