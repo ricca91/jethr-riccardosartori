@@ -10,7 +10,8 @@ quelle stanno in `processo/decisioni.md` e nei commenti di risoluzione dei ticke
 
 **Voce**:
 Un fatto di calcolo che esce dal motore: importo, base su cui è stato calcolato,
-tipo, fonte normativa. Non sa come verrà mostrata.
+tipo, fonte normativa e gli altri fatti effettivamente usati per ottenerlo e
+spiegarlo. Non contiene testo né sa come verrà mostrata.
 _Avoid_: riga, item, entry, componente
 
 **Riga**:

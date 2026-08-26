@@ -1133,6 +1133,7 @@ body.jet-base{background:var(--jet-surface-ivory);margin:0;padding-bottom:104px}
 
 /* modulo */
 .form-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:24px;align-items:start}
+.geo-grid{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:22px}
 .assum{display:flex;flex-wrap:wrap;gap:6px}
 .calcrow{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:4px}
 .dirty{display:none;align-items:center;gap:8px;font-size:14px;color:var(--jet-warning-ink)}
@@ -1220,7 +1221,7 @@ body.jet-base{background:var(--jet-surface-ivory);margin:0;padding-bottom:104px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
 
 @media(max-width:900px){
-  .form-grid{grid-template-columns:1fr}
+  .form-grid,.geo-grid{grid-template-columns:1fr}
 }
 @media(max-width:600px){
   .pg{width:100%;padding-inline:16px}
@@ -1276,7 +1277,11 @@ body.jet-base{background:var(--jet-surface-ivory);margin:0;padding-bottom:104px}
 </head>
 <body class="jet-base">
 <div id="app"></div>
+<script src="dati-addizionali-2026.js"></script>
+<script src="geografia.js"></script>
 <script src="motore.js"></script>
+<script src="fonti.js"></script>
+<script src="righe.js"></script>
 <script>
 
 
@@ -1284,17 +1289,6 @@ body.jet-base{background:var(--jet-surface-ivory);margin:0;padding-bottom:104px}
 /* ============================================================
    DATI — una sola sorgente contenutistica, riusata ovunque
    ============================================================ */
-const FONTI={
-  inps101:['INPS, circolare 101/2024','aliquota IVS 9,19% a carico del lavoratore','https://www.inps.it/it/it/inps-comunica/atti/circolari-messaggi-e-normativa/dettaglio.circolari-e-messaggi.2024.11.circolare-numero-101-del-29-11-2024_14714.html'],
-  inps6:['INPS, circolare 6/2026','prima fascia 56.224 € e massimale 122.295 €','https://www.inps.it/it/it/inps-comunica/atti/circolari-messaggi-e-normativa/dettaglio.circolari-e-messaggi.2026.01.circolare-numero-6-del-30-01-2026_15151.html'],
-  l199:['L. 199/2025, art. 1 c. 3','scaglioni IRPEF 2026: 23 / 33 / 43%','https://www.normattiva.it/eli/stato/LEGGE/2025/12/30/199/CONSOLIDATED'],
-  tuir13:['TUIR, art. 13','detrazione da lavoro dipendente e maggiorazione di 65 €','https://def.giustiziatributaria.gov.it/DocTribFrontend/getAttoNormativoDetail.do?ACTION=getArticolo&articolo=Articolo+13&id=%7B31D694E8-4398-4030-873B-FEAF5A6647F9%7D'],
-  l207c4:['L. 207/2024, art. 1 c. 4-5','somma non imponibile fino a 20.000 € di reddito','https://www.normattiva.it/eli/stato/LEGGE/2024/12/30/207/CONSOLIDATED/20251219'],
-  l207c6:['L. 207/2024, art. 1 c. 6','ulteriore detrazione fra 20.000 e 40.000 €','https://www.normattiva.it/eli/stato/LEGGE/2024/12/30/207/CONSOLIDATED/20251219'],
-  dl3:['D.L. 3/2020, art. 1','trattamento integrativo','https://www.normattiva.it/atto/caricaDettaglioAtto?atto.codiceRedazionale=20A02005&atto.dataPubblicazioneGazzetta=2020-04-04&tipoDettaglio=multivigenza'],
-  lomb:['Regione Lombardia','addizionale regionale IRPEF progressiva','https://www.regione.lombardia.it/bollo-auto-e-tributi-regionali/red-addizionale-regionale-irpef'],
-  mi:['Comune di Milano','addizionale comunale 0,8%, esenzione fino a 23.000 €','https://www.comune.milano.it/argomenti/tributi/addizionale-comunale-irpef'],
-};
 const LIMITI=[
   ['Il 9,19% è una scelta di modello','Non è l\'aliquota di ogni impiegato privato: inquadramento INPS, settore, dimensione del datore e fondi speciali possono cambiarla. Qui si assume FPLD ordinario, senza contribuzioni settoriali.'],
   ['«RAL» non è una base legale autonoma','È una convenzione retributiva. Il calcolo assume RAL = imponibile previdenziale = imponibile fiscale prima dei contributi, senza componenti variabili, benefit o rimborsi.'],
@@ -1303,11 +1297,17 @@ const LIMITI=[
 ];
 const FAQ=[
   ['Perché il netto mensile non coincide con la mia busta paga?','Il calcolo è annuale e di competenza. Le addizionali vengono trattenute a rate nell\'anno successivo al conguaglio, la tredicesima non beneficia delle stesse detrazioni mensili e il conguaglio di fine anno riequilibra tutto. Per questo il numero è etichettato <b>media</b>, mai «importo del cedolino».'],
-  ['Perché scegliere 12 o 13 mensilità non cambia il netto annuo?','Perché non è un dato di calcolo: è solo il divisore con cui si presenta lo stesso netto annuo. Le trattenute non cambiano. Puoi verificarlo qui sopra — cambiando il selettore il netto annuo resta identico e si muove solo la media. Se cambiasse, sarebbe un errore.'],
-  ['Perché a volte un euro lordo in più fa <em>scendere</em> il netto?','Perché alcune misure sono esenzioni con soglia secca, non franchigie: superata la soglia si perdono per intero. Il caso più forte è l\'esenzione dell\'addizionale comunale di Milano: a 25.327,62 € di RAL un centesimo lordo in più costa circa 184 € netti l\'anno. È corretto, non è un errore di arrotondamento — ed è il motivo per cui queste soglie vanno mostrate invece che nascoste.'],
+  ['Perché scegliere 12, 13 o 14 mensilità non cambia il netto annuo?','Perché non è un dato di calcolo: è solo il divisore con cui si presenta lo stesso netto annuo. Le trattenute non cambiano. Puoi verificarlo qui sopra — cambiando il selettore il netto annuo resta identico e si muove solo la media. Se cambiasse, sarebbe un errore.'],
+  ['Perché a volte un euro lordo in più fa <em>scendere</em> il netto?',stato=>{
+    const geo=GEOGRAFIA_ITALIA.risolvi(stato.comune);
+    const locali=soglie({comune:stato.comune}).filter(s=>s.ambito==='comunale');
+    if(!locali.length)return `Alcune misure sono esenzioni con soglia secca, non franchigie. Per ${esc(geo.comune.nome)} lo snapshot non contiene una discontinuità comunale generale; restano le soglie nazionali e le eventuali soglie regionali.`;
+    const s=locali[0];
+    return `Perché alcune misure locali sono esenzioni con soglia secca, non franchigie: superata la soglia si perdono per intero. Per ${esc(geo.comune.nome)}, alla RAL di ${eur(s.ral)}, il salto dell’addizionale comunale vale ${eur(Math.abs(s.delta))} sul netto annuo.`;
+  }],
   ['Quali sono i contributi a carico del dipendente?','Il contributo IVS del 9,19% sull\'imponibile previdenziale, più un contributo aggiuntivo dell\'1% sulla quota che supera la prima fascia pensionabile (56.224 € nel 2026). Sopra il massimale di 122.295 € entrambi si fermano: è il motivo per cui l\'aliquota contributiva effettiva scende oltre quella soglia.'],
   ['Cosa non è incluso nel calcolo?','TFR, costo azienda e contributi del datore, INAIL, CCNL e fondi di solidarietà, fondi sanitari e previdenza complementare, familiari a carico, altri redditi, oneri deducibili e detraibili, benefit, premi e agevolazioni personali. Nessuno di questi è ricavabile dalla sola RAL: chiederli significherebbe un modulo lungo prima del primo risultato.'],
-  ['Da dove vengono le regole?','Solo da fonti primarie: leggi di bilancio 2025 e 2026, TUIR, circolari INPS, siti ufficiali di Regione Lombardia e Comune di Milano. Ogni voce del dettaglio rimanda al proprio riferimento, e l\'elenco completo è nella sezione Metodo.'],
+  ['Da dove vengono le regole?','Solo da fonti primarie: Istat per i comuni attivi, MEF per le addizionali locali, leggi di bilancio, TUIR e circolari INPS. Ogni voce del dettaglio rimanda al riferimento ufficiale applicato.'],
 ];
 const SEZIONI=[['risultato','Risultato'],['flusso','Il flusso'],['dettaglio','Il dettaglio'],['metodo','Metodo e fonti'],['faq','Domande frequenti']];
 
@@ -1323,22 +1323,25 @@ const C={contrib:'var(--_ref---color--gray-scale--400)',tax:'var(--_ref---color-
 // Bianco sul verde darebbe un contrasto di 2,03, sotto il minimo di 4,5.
 const CINK={contrib:'var(--jet-black)',tax:'#fff',netto:'var(--jet-black)',integr:'var(--jet-lime-ink)'};
 
-function hero(){
+function hero(st){
   return `<div class="hero">
     <h1>Dove va la tua RAL</h1>
     <p>Inserisci il lordo annuo: vedi quanto resta, dove finisce il resto e perché.
        Ogni euro è verificabile e ogni regola ha una fonte.</p>
     <div class="meta">
       <span class="jet-badge jet-badge--lime">Regole 2026</span>
-      <span class="jet-badge jet-badge--neutral">Milano</span>
+      <span class="jet-badge jet-badge--neutral">${esc(GEOGRAFIA_ITALIA.risolvi(st.comune).comune.nome)}</span>
       <span class="jet-badge jet-badge--neutral">Settore privato</span>
       <span class="jet-badge jet-badge--neutral">Tempo indeterminato</span>
     </div>
-    <a class="worklink" href="come-ho-lavorato.html">Come ho costruito e verificato il calcolo →</a>
+    <a class="worklink" href="la-storia.html">La storia: cosa è successo dopo la pubblicazione →</a>
   </div>`;
 }
 function form(st){
   const err=st.errore?`<p class="jet-help" style="color:var(--jet-danger-ink)" role="alert">${esc(st.errore)}</p>`:'';
+  const province=GEOGRAFIA_ITALIA.province(st.regione),comuni=GEOGRAFIA_ITALIA.comuni(st.provincia);
+  const opts=(xs,value,label)=>xs.map(x=>{const v=Object.hasOwn(x,'catastale')?x.catastale:x.id;
+    return`<option value="${v}" ${v==value?'selected':''}>${esc(label(x))}</option>`;}).join('');
   return `<div class="jet-card jet-card--float" style="padding:28px">
     <div class="form-grid">
       <div class="jet-field ${st.errore?'jet-field--error':''}">
@@ -1348,16 +1351,25 @@ function form(st){
           <input class="jet-input" id="ral" inputmode="decimal" autocomplete="off"
             value="${esc(st.ralRaw)}" placeholder="35.000" aria-describedby="ralhelp">
         </div>
-        ${err||`<p class="jet-help" id="ralhelp">L'unico dato richiesto. Anno, città e contratto sono fissati e dichiarati.</p>`}
+        ${err||`<p class="jet-help" id="ralhelp">Il calcolo usa il comune di domicilio fiscale selezionato.</p>`}
       </div>
       <div class="jet-field">
         <label class="jet-label" id="mlab">Mensilità</label>
         <div class="jet-segmented" role="group" aria-labelledby="mlab">
-          <button data-m="12" aria-pressed="${st.mensilita===12}">12</button>
-          <button data-m="13" aria-pressed="${st.mensilita===13}">13</button>
+          ${MENSILITA_AMMESSE.map(m=>
+            `<button data-m="${m}" aria-pressed="${st.mensilita===m}">${m}</button>`).join('')}
         </div>
         <p class="jet-help">Divide il netto annuo per mostrarne la media. Non cambia il calcolo.</p>
       </div>
+    </div>
+    <div class="form-grid geo-grid">
+      <div class="jet-field"><label class="jet-label" for="regione">Regione</label>
+        <select class="jet-select" id="regione">${opts(GEOGRAFIA_ITALIA.regioni(),st.regione,x=>x.nome)}</select></div>
+      <div class="jet-field"><label class="jet-label" for="provincia">Provincia</label>
+        <select class="jet-select" id="provincia">${opts(province,st.provincia,x=>`${x.nome} (${x.sigla})`)}</select>
+        <p class="jet-help">Raggruppamento geografico, non giurisdizione fiscale.</p></div>
+      <div class="jet-field"><label class="jet-label" for="comune">Comune</label>
+        <select class="jet-select" id="comune">${opts(comuni,st.comune,x=>x.nome)}</select></div>
     </div>
     <hr class="jet-divider" style="margin:24px 0">
     <div class="calcrow">
@@ -1368,13 +1380,14 @@ function form(st){
     </div>
   </div>`;
 }
-function cifreChiave(){
+function cifreChiave(stato=st){
+  const g=GEOGRAFIA_ITALIA.risolvi(stato.comune);
   return `<div class="scagl">
     <div><div class="q">1º scaglione</div><div class="a">23%</div><div class="n">fino a 28.000 €</div></div>
     <div><div class="q">2º scaglione</div><div class="a">33%</div><div class="n">28.000 – 50.000 €</div></div>
     <div><div class="q">3º scaglione</div><div class="a">43%</div><div class="n">oltre 50.000 €</div></div>
     <div><div class="q">Contributi IVS</div><div class="a">9,19%</div><div class="n">a carico del dipendente</div></div>
-    <div><div class="q">Addizionale Milano</div><div class="a">0,8%</div><div class="n">esente fino a 23.000 € di imponibile</div></div>
+    <div><div class="q">Regole locali</div><div class="a">${esc(g.comune.nome)}</div><div class="n">fonte MEF · snapshot ${g.meta.asOf}</div></div>
   </div>`;
 }
 function kpis(res,lead){
@@ -1454,132 +1467,11 @@ function sankey(res,h,fs){
     meno imposte ${eur(tx)}${ig>0?`, più integrazioni di legge ${eur(ig)}`:''}, netto annuo ${eur(ne)}.</p>`;
 }
 
-/* ============================================================
-   RIGHE — dal numero alla frase.
-
-   Il motore emette una VOCE: importo, base, tipo, fonte, e i
-   numeri che sono entrati nel conto. Titolo e formula nascono
-   qui, perché sono disegno e non calcolo — è la distinzione fra
-   «voce» e «riga» del glossario in CONTEXT.md.
-
-   Nessun letterale fiscale in questo blocco: soglie e aliquote
-   arrivano da `K`, esportata dal motore. Se una soglia cambia,
-   cambia in un posto solo e la frase la segue.
-   ============================================================ */
-/* RIGHE-INIZIO */
-/* L'impalcatura sta in inglese, come `fmt`, `eur` e `grp`: serve a
-   far funzionare la macchina, non a descrivere una norma. */
-const noCents=n=>fmt(n).replace(',00','');
-const pct=(n,d)=>(n*100).toFixed(d).replace('.',',')+'%';
-const toThousands=b=>toNumber(b)/1000;
-
-/* Capienza: le detrazioni abbattono l'imposta, non sono
-   rimborsabili. La nota compare su TUTTE le detrazioni appena una
-   di esse non entra intera — è un vincolo sul totale, non su una
-   voce sola. */
-function capienza(v,voci){
-  const detrazioni=voci.filter(x=>x.tipo==='detrazione');
-  if(detrazioni.every(x=>x.capiente))return '';
-  return `  →  spettante ${fmt(v.spettante)} €,`+
-    `  ⚠ capienza: usata ${fmt(v.importo)} € — le detrazioni non sono rimborsabili`;
-}
-
-/* Una riga per voce, titolo e formula accanto: aggiungere una voce
-   è una sola aggiunta qui, non una in un elenco di titoli più una
-   in un ramo di formula. */
-const RIGHE={
-  ivs:{
-    titolo:()=>'Contributi previdenziali IVS',
-    formula:v=>`${fmt(v.base)} × ${pct(v.aliquota,2)}`,
-  },
-  ecc:{
-    titolo:v=>`Contributo aggiuntivo ${pct(v.aliquota,0)}`,
-    formula:v=>`(${fmt(v.baseContributiva)} − ${fmt(v.soglia)}) × ${pct(v.aliquota,0)}`,
-  },
-  lorda:{
-    titolo:()=>'IRPEF lorda',
-    formula:v=>{
-      const sc=K.irpef.scaglioni,al=i=>pct(toNumber(sc[i][1]),0);
-      return `${al(0)} × min(${fmt(v.base)}; ${noCents(toNumber(sc[0][0]))}) `+
-             `+ ${al(1)} sulla quota ${toThousands(sc[0][0])}–${toThousands(sc[1][0])}k `+
-             `+ ${al(2)} oltre`;
-    },
-  },
-  detrlav:{
-    titolo:v=>'Detrazione lavoro dipendente'+
-      (v.maggiorazione>0?` (+${noCents(v.maggiorazione)} €)`:''),
-    formula:(v,voci)=>{
-      const D=K.detrazioneLavoro;
-      let f;
-      if(v.base<=toNumber(D.sogliaFissa))
-        f=`${fmt(v.quotaFissa)} (fisso fino a ${noCents(toNumber(D.sogliaFissa))} €)`;
-      else if(v.base<=toNumber(D.sogliaIntermedia))
-        f=`${noCents(v.quotaFissa)} + ${noCents(v.quotaVariabile)} × ${v.rapporto.toFixed(4)}`;
-      else if(v.base<=toNumber(D.sogliaFinale))
-        f=`${noCents(v.quotaVariabile)} × ${v.rapporto.toFixed(4)}`+
-          `  (rapporto troncato a 4 decimali)`;
-      else f=`0 (imponibile oltre ${noCents(toNumber(D.sogliaFinale))} €)`;
-      if(v.maggiorazione>0)
-        f+=`  +${noCents(v.maggiorazione)} (imponibile `+
-           `${toThousands(D.maggiorazioneDa)}–${toThousands(D.maggiorazioneA)}k)`;
-      return f+capienza(v,voci);
-    },
-  },
-  detrult:{
-    titolo:()=>'Ulteriore detrazione',
-    formula:(v,voci)=>{
-      const U=K.ulterioreDetrazione;
-      const f=v.rapporto===null
-        ? `${fmt(v.quotaFissa)} (imponibile ${toThousands(U.da)}–${toThousands(U.pienoFinoA)}k)`
-        : `${noCents(v.quotaFissa)} × (${noCents(toNumber(U.a))} − ${fmt(v.base)}) `+
-          `÷ ${noCents(toNumber(U.ampiezzaDecrescente))}`;
-      return f+capienza(v,voci);
-    },
-  },
-  addreg:{
-    titolo:()=>'Addizionale regionale Lombardia',
-    formula:v=>{
-      if(!v.dovuta)return '0 — non dovuta: IRPEF netta è zero';
-      const sc=K.regionale.scaglioni;
-      return sc.map(([tetto,aliquota],i)=>{
-        const al=pct(toNumber(aliquota),2);
-        if(tetto===null)return `${al} oltre`;
-        return i===0?`${al} fino a ${toThousands(tetto)}k`
-                    :`${al} ${toThousands(sc[i-1][0])}–${toThousands(tetto)}k`;
-      }).join(' · ');
-    },
-  },
-  addcom:{
-    titolo:()=>'Addizionale comunale Milano',
-    formula:v=>{
-      if(!v.dovuta)return '0 — non dovuta: IRPEF netta è zero';
-      const esente=toNumber(K.comunale.esenzioneFinoA);
-      return v.base>esente
-        ? `${fmt(v.base)} × ${pct(v.aliquota,1)} (sull'intero imponibile)`
-        : `0 — esente fino a ${noCents(esente)} € di imponibile`;
-    },
-  },
-  somma:{
-    titolo:()=>'Somma non imponibile (cuneo)',
-    formula:v=>`${fmt(v.base)} × ${pct(v.aliquota,1)}`,
-  },
-  ti:{
-    titolo:()=>'Trattamento integrativo',
-    formula:v=>{
-      const T=K.trattamentoIntegrativo;
-      return `${fmt(v.quotaFissa)} — imponibile ≤ ${noCents(toNumber(T.limiteImponibile))} `+
-             `e IRPEF lorda > detrazione − ${noCents(toNumber(T.scartoDetrazione))}`;
-    },
-  },
-};
-
-const titolo=v=>RIGHE[v.id].titolo(v);
-const formula=(v,voci)=>RIGHE[v.id].formula(v,voci);
-/* RIGHE-FINE */
-
 /* ---- dettaglio: catena a operatori firmati + pannello della voce scelta ---- */
 function chain(res,st){
   const v=id=>res.voci.find(x=>x.id===id);
+  const righe=componiRighe(res.voci);
+  const r=id=>righe.find(x=>x.id===id);
   const rows=[];
   const grp=t=>rows.push(`<tr class="grp"><td></td><td colspan="2" class="g">${t}</td></tr>`);
   const row=(op,label,val,voce,cls='')=>{
@@ -1592,7 +1484,7 @@ function chain(res,st){
       ${voce?`data-voce="${voce.id}"`:''}><td class="op">${op}</td><td>${nm}</td>
       <td class="amt">${eur(Math.abs(val))}</td></tr>`);
   };
-  const rigaVoce=(op,id)=>{const x=v(id);if(x)row(op,titolo(x),x.importo,x);};
+  const rigaVoce=(op,id)=>{const x=v(id),rx=r(id);if(x)row(op,rx.titolo,x.importo,x);};
   grp('Dalla RAL all\'imponibile');
   row('','RAL',res.input.ral,null);
   rigaVoce('−','ivs');
@@ -1612,15 +1504,16 @@ function chain(res,st){
   rows.push(`<tr class="tot"><td class="op">=</td><td>Netto annuo</td>
     <td class="amt">${eur(res.kpi.nettoAnnuo)}</td></tr>`);
   const sel=st.aperta?res.voci.find(x=>x.id===st.aperta):null;
-  const pane=sel?(()=>{const[t,d,u]=FONTI[sel.fonte];
-    return `<h4>${esc(titolo(sel))}</h4>
+  const rigaSel=sel?r(sel.id):null;
+  const pane=sel?(()=>{const fonte=rigaSel.fonte;
+    return `<h4>${esc(rigaSel.titolo)}</h4>
       <div class="jet-body-s jet-muted" style="margin-bottom:2px">${esc(sel.tipo)} · base ${eur(sel.base)}</div>
-      <code>${esc(formula(sel,res.voci)||'—')}</code>
+      <code>${esc(rigaSel.formula)}</code>
       <div class="jet-body-s"><b>${eur(Math.abs(sel.importo))}</b></div>
       <hr class="jet-divider" style="margin:14px 0">
       <div class="jet-body-xs jet-muted">Fonte</div>
-      <a class="jet-body-s" href="${u}" target="_blank" rel="noopener">${esc(t)}</a>
-      <div class="jet-body-xs jet-muted" style="margin-top:2px">${esc(d)}</div>`;})()
+      <a class="jet-body-s" href="${fonte.url}" target="_blank" rel="noopener">${esc(fonte.titolo)}</a>
+      <div class="jet-body-xs jet-muted" style="margin-top:2px">${esc(fonte.descrizione)}</div>`;})()
     :`<div class="empty"><b>Nessuna voce selezionata.</b><br>
        Clicca una riga della catena — quelle con il segno <span class="jet-info-dot" aria-hidden="true">i</span> —
        per vederne formula, base di calcolo e fonte normativa.</div>`;
@@ -1642,7 +1535,12 @@ function avvisoMassimale(res){
     anzianità contributiva al 31 dicembre 1995. Se questa condizione non vale, il risultato
     non è applicabile.</div>`;
 }
-function metodo(){
+function metodo(stato=st){
+  const geo=GEOGRAFIA_ITALIA.risolvi(stato.comune);
+  const fontiMetodo=[...Object.values(FONTI).slice(0,7),
+    ['Istat — comuni italiani',`${geo.meta.istat.comuni} comuni attivi dal ${geo.meta.istat.vigenteDal}`,geo.meta.istat.url],
+    ['MEF — addizionale regionale',`Regola 2026 per ${geo.regione.nome}`,geo.regionale.fonte.url],
+    ['MEF — addizionale comunale',`Regola ${geo.comunale.fonte.annoOrigine} per ${geo.comune.nome}, ${geo.comunale.fonte.stato}`,geo.comunale.fonte.url]];
   return `<div class="stack" style="gap:26px">
     <div>
       <h3 class="jet-h5" style="margin:0 0 8px">L'ordine delle operazioni</h3>
@@ -1651,7 +1549,7 @@ function metodo(){
       IRPEF netta, addizionali — dovute solo se l'IRPEF netta è positiva — e integrazioni di legge.
       Aritmetica decimale al centesimo, mai in virgola mobile binaria; il netto è definito come la somma
       delle voci arrotondate, così la tabella chiude sempre per costruzione.
-      Versione delle regole: <span class="jet-chip jet-chip--mono">regole-2026-v1</span></p>
+      Versione delle regole: <span class="jet-chip jet-chip--mono">regole-2026-v2</span></p>
     </div>
     <div>
       <h3 class="jet-h5" style="margin:0 0 8px">Cifre chiave 2026</h3>
@@ -1660,7 +1558,7 @@ function metodo(){
     <div>
       <h3 class="jet-h5" style="margin:0 0 10px">Fonti</h3>
       <div class="voci" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
-        ${Object.values(FONTI).map(([t,d,u])=>`<div class="voce" style="padding:14px 16px">
+        ${fontiMetodo.map(([t,d,u])=>`<div class="voce" style="padding:14px 16px">
           <a class="jet-body-s" style="font-weight:600" href="${u}" target="_blank" rel="noopener">${esc(t)}</a>
           <div class="jet-body-xs jet-muted">${esc(d)}</div></div>`).join('')}
       </div>
@@ -1671,11 +1569,12 @@ function metodo(){
       Due controlli, di natura diversa. <b>A ogni ricalcolo</b> la pagina verifica che la somma
       delle voci sia il netto annuo: il netto non è un totale calcolato a parte e poi confrontato,
       è quella somma. Una tabella che non chiude non può comparire a schermo.
-      <b>Fuori dalla pagina</b> gira una matrice di prove sul motore, in tre categorie tenute
+      <b>Fuori dalla pagina</b> gira una matrice di prove sul motore, in quattro categorie tenute
       distinte perché provano cose diverse: poche ancore confrontate a mano con la norma
       (la catena completa a 35.000 €, il massimale, la fine dell'esenzione comunale, la capienza
-      delle detrazioni), le sette soglie e i quattro cambi di pendenza presi a un centesimo di
-      distanza, e una rete di regressione a passo di 100 € da 0 a 200.000 €.</p>
+      delle detrazioni), le soglie nazionali e locali del comune selezionato e i cambi di pendenza presi a un centesimo di
+      distanza, una rete di regressione a passo di 100 € da 0 a 200.000 €, e ogni voce del calcolo
+      esercitata da sola.</p>
       <p class="jet-body-s" style="margin:0;color:var(--jet-text-regular);max-width:74ch">
       Cosa <b>non</b> è provato conta quanto il resto: nessun consulente del lavoro ha validato
       questi numeri, e la riconciliazione da sola non prova la correttezza — conferma un'identità
@@ -1692,9 +1591,9 @@ function metodo(){
     </div>
   </div>`;
 }
-function faq(){
+function faq(stato=st){
   return `<div class="jet-accordion">${FAQ.map(([q,a])=>`<details><summary><span>${q}</span></summary>
-    <div class="jet-body-s" style="padding-bottom:18px;color:var(--jet-text-regular);max-width:74ch">${a}</div>
+    <div class="jet-body-s" style="padding-bottom:18px;color:var(--jet-text-regular);max-width:74ch">${typeof a==='function'?a(stato):a}</div>
   </details>`).join('')}</div>`;
 }
 
@@ -1714,7 +1613,7 @@ function sezioni(res,st){
      lede:'La catena completa, con gli operatori in chiaro. Ogni riga contrassegnata si apre: cliccala e la spiegazione compare qui a fianco.',
      body:chain(res,st)},
     {id:'metodo',eye:'Metodo',t:'Come è costruito il calcolo',
-     lede:'Le regole sono dichiarate, non selezionabili: un solo caso, spiegato per intero.',
+     lede:'Le regole nazionali e locali applicate sono dichiarate e collegate alla fonte ufficiale.',
      body:metodo()},
     {id:'faq',eye:'Domande frequenti',t:'Le domande che arrivano sempre',
      lede:'',body:faq()},
@@ -1728,7 +1627,7 @@ const anchorsHTML=st=>`<nav class="anchors" aria-label="Sezioni del risultato">
        sezioni a fasce alternate ---- */
 function pagina(res,st){
   const secs=sezioni(res,st);
-  return `<div class="pg">${hero()}${form(st)}</div>
+  return `<div class="pg">${hero(st)}${form(st)}</div>
     <div class="anchorbar" style="margin-top:32px"><div class="pg"><div class="inner">
       ${anchorsHTML(st)}
       <div class="mini"><span class="jet-body-xs jet-muted">NETTO ANNUO</span>
@@ -1748,12 +1647,12 @@ function pagina(res,st){
 }
 const eggDialog=()=>`<dialog class="egg-modal" id="egg"><p>Questa non è più una RAL.<br>È un pre-seed!</p></dialog>`;
 function vuoto(st){
-  return `<div class="pg">${hero()}${form(st)}
+  return `<div class="pg">${hero(st)}${form(st)}
     <section class="sec" style="margin-top:40px">
       <div class="sec-eyebrow">Prima di calcolare</div>
       <h2 style="margin-top:10px">Cifre chiave 2026</h2>
-      <p class="lede">Le regole che il calcolo applica. Sono dichiarate, non selezionabili.</p>
-      <div class="sec-body">${cifreChiave()}</div>
+      <p class="lede">Le regole nazionali e locali che il calcolo applica.</p>
+      <div class="sec-body">${cifreChiave(st)}</div>
     </section>
     <section class="sec" style="margin-top:40px;padding-bottom:40px">
       <div class="sec-eyebrow">Domande frequenti</div>
@@ -1767,18 +1666,23 @@ function vuoto(st){
 /* ============================================================
    STATO E EVENTI
    ============================================================ */
-const st={ralRaw:'35.000',mensilita:13,
+const GEO_DEFAULT=GEOGRAFIA_ITALIA.risolvi('F205');
+const st={ralRaw:'35.000',mensilita:13,regione:GEO_DEFAULT.provincia.regione,
+  provincia:GEO_DEFAULT.comune.provincia,comune:GEO_DEFAULT.comune.catastale,
   aperta:null,attiva:'risultato',res:null,errore:null,dirty:false,eggPending:false};
 
 function fromURL(){
   const p=new URLSearchParams(location.search);
+  if(p.get('c')){try{const g=GEOGRAFIA_ITALIA.risolvi(p.get('c'));
+    st.regione=g.provincia.regione;st.provincia=g.comune.provincia;st.comune=g.comune.catastale;}catch{}}
   if(p.get('ral'))st.ralRaw=p.get('ral');
-  if(p.get('m'))st.mensilita=p.get('m')==='12'?12:13;
+  const mensilita=Number(p.get('m'));
+  if(MENSILITA_AMMESSE.includes(mensilita))st.mensilita=mensilita;
   if(p.get('calc')==='1')commit(true);
 }
 function toURL(){
   const p=new URLSearchParams();
-  p.set('ral',st.ralRaw);p.set('m',String(st.mensilita));
+  p.set('ral',st.ralRaw);p.set('m',String(st.mensilita));p.set('c',st.comune);
   if(st.res)p.set('calc','1');
   history.replaceState(null,'','?'+p.toString());
 }
@@ -1790,7 +1694,7 @@ function commit(silenzioso){
   else if(Number(v)<0){st.errore='La RAL non può essere negativa.';st.res=null;}
   else if(Number(v)===4700000){st.res=null;st.dirty=false;st.eggPending=true;}
   else if(Number(v)>1000000){st.errore='Il calcolo è disponibile fino a una RAL di 1.000.000 €.';st.res=null;}
-  else{st.res=calcola(v,st.mensilita);st.dirty=false;st.eggPending=false;
+  else{st.res=applicaMensilita(calcola(v,{comune:st.comune}),st.mensilita);st.dirty=false;st.eggPending=false;
     if(!st.aperta)st.aperta='ivs';}   // mostra subito a cosa serve il pannello
   if(!silenzioso)render();
 }
@@ -1844,6 +1748,18 @@ document.addEventListener('input',e=>{
   if(e.target.id!=='ral')return;
   st.ralRaw=e.target.value;
   if(st.res){st.dirty=true;e.target.closest('.jet-card')?.classList.add('is-dirty');}
+});
+document.addEventListener('change',e=>{
+  if(!['regione','provincia','comune'].includes(e.target.id))return;
+  if(e.target.id==='regione'){
+    st.regione=Number(e.target.value);
+    const p=GEOGRAFIA_ITALIA.province(st.regione)[0];
+    st.provincia=p.id;st.comune=GEOGRAFIA_ITALIA.comuni(p.id)[0].catastale;
+  }else if(e.target.id==='provincia'){
+    st.provincia=Number(e.target.value);st.comune=GEOGRAFIA_ITALIA.comuni(st.provincia)[0].catastale;
+  }else st.comune=e.target.value;
+  if(st.res)st.dirty=true;
+  render(true);
 });
 document.addEventListener('keydown',e=>{
   if(e.target.id==='ral'&&e.key==='Enter'){e.preventDefault();commit();}

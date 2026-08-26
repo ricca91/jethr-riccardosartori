@@ -3,10 +3,10 @@
 Una pagina che risponde a una domanda sola: di una retribuzione annua lorda, quanto resta
 in tasca, dove finisce il resto e perché.
 
-Un solo dato da inserire, la RAL. Anno, città e contratto non sono selezionabili: sono
-dichiarati in cima alla pagina — **regole 2026, Milano, settore privato, tempo
-indeterminato, anno intero**. Un caso solo, spiegato per intero, invece di un modulo lungo
-prima del primo risultato.
+Si inserisce la RAL e si sceglie il domicilio fiscale con tre controlli dipendenti:
+**regione → provincia → comune**. Il profilo resta dichiarato — regole 2026, settore
+privato, tempo indeterminato, anno intero — mentre le addizionali coprono tutti i 7.894
+comuni Istat attivi nello snapshot del 21 febbraio 2026.
 
 ## I file
 
@@ -16,11 +16,17 @@ prima del primo risultato.
 | `come-ho-lavorato.html` | la nota di lavoro: perimetro, modello, verifica, limiti |
 | `motore.js` | il calcolo, separato per poterlo provare fuori dal browser |
 | `motore.test.js` | la matrice di prova |
+| `righe.js` | l'adapter che trasforma ogni Voce in una Riga |
+| `righe.test.js` | le prove della seam Voce → Riga |
+| `fonti.js` | il catalogo delle fonti normative usato da pagina e adapter |
+| `geografia.js` | la piccola interface per elenchi dipendenti e risoluzione per codice catastale |
+| `dati-addizionali-2026.js` | lo snapshot runtime generato da Istat e MEF |
+| `../processo/attrezzi/importa-addizionali.js` | l'import deterministico degli snapshot ufficiali |
 | `../processo/verifica.md` | che cosa è provato, come, e che cosa non lo è |
 
 ## Come si apre
 
-Doppio clic su `index.html`, tenendo `motore.js` nella stessa cartella.
+Doppio clic su `index.html`, tenendo `motore.js`, `righe.js` e `fonti.js` nella stessa cartella.
 Nessuna dipendenza, nessun passo di build, nessuna richiesta di rete: i caratteri
 Wix Madefor Display sono incorporati nel file, quindi la pagina funziona anche offline.
 Vale anche per `come-ho-lavorato.html`, che porta la propria copia dei caratteri per
@@ -29,12 +35,13 @@ restare apribile da sola.
 Il motore è uno script classico e non un modulo ES proprio per questo: i moduli non si
 caricano da `file://`, gli script classici sì.
 
-Lo stato sta nell'URL (`?ral=&m=&calc=1`), quindi ogni schermata è condivisibile.
+Lo stato sta nell'URL (`?ral=&m=&c=&calc=1`), incluso il codice catastale del comune,
+quindi ogni schermata è condivisibile.
 
 ## Come si provano i numeri
 
 ```
-node --test prototipo/motore.test.js
+node --test prototipo/*.test.js
 ```
 
 Node 18 o successivo, zero dipendenze. Lo stesso file `motore.js` che gira nella pagina
@@ -50,9 +57,10 @@ formula, base di calcolo e fonte normativa di ogni riga. Chi vuole solo il numer
 alla prima schermata; chi non si fida scende fino alla norma.
 
 **2. Le soglie si mostrano, non si nascondono.** In alcuni punti un euro lordo in più fa
-*scendere* il netto: a 25.327,62 € di RAL finisce l'esenzione dell'addizionale comunale
-di Milano e il netto perde 184 € l'anno. È un'esenzione, non una franchigia. Un
-calcolatore che liscia quel gradino mente; questo lo calcola e lo spiega nelle FAQ.
+*scendere* il netto. `soglie({ comune })` separa gli eventi nazionali, regionali e
+comunali e la FAQ usa sempre il comune selezionato. Per Milano, a 25.327,62 € di RAL
+finisce l'esenzione comunale e il netto perde 184 € l'anno; un comune senza esenzione
+non eredita quel gradino. È un'esenzione, non una franchigia.
 
 **3. Ogni euro torna, per costruzione.** Il netto non è un totale calcolato a parte e poi
 confrontato con le voci: **è** la somma delle voci arrotondate. La verifica gira a ogni
@@ -67,8 +75,17 @@ detrazioni con la capienza, IRPEF netta, addizionali — dovute solo se l'IRPEF 
 positiva — e integrazioni di legge. Troncamento a quattro decimali solo sui rapporti
 dell'art. 13, dove la norma lo impone.
 
-Versione delle regole: `regole-2026-v1`. Fonti primarie, tutte citate nella pagina:
-leggi di bilancio 2025 e 2026, TUIR, circolari INPS, Regione Lombardia, Comune di Milano.
+Versione delle regole: `regole-2026-v2`. Fonti primarie, tutte citate nella pagina:
+leggi di bilancio 2025 e 2026, TUIR, circolari INPS, Istat e MEF. Le pubblicazioni
+comunali 2026 si sovrappongono alla disciplina 2025 prorogata; ogni regola conserva
+annualità, `asOf`, stato definitivo/provvisorio ed estremi disponibili della delibera.
+
+Per rigenerare lo snapshot, dopo aver sostituito i quattro file ufficiali in
+`processo/dati/fonti/`, eseguire:
+
+```
+node processo/attrezzi/importa-addizionali.js
+```
 
 L'input accetta RAL da 0 a **1.000.000 €**. Oltre, il calcolatore si ferma e lo dice:
 il modello non è pensato per quelle cifre e restituire un numero preciso su un caso
@@ -76,10 +93,19 @@ fuori perimetro sarebbe peggio che non rispondere. Sopra **122.295 €** il risu
 compare con l'avviso che assume nessuna anzianità contributiva al 31 dicembre 1995 —
 l'unico punto in cui la sola RAL non basta più.
 
-Il selettore **12/13 mensilità** si applica senza ricalcolare nulla: divide un netto annuo
-già calcolato. È la dimostrazione a schermo di una tesi del modello — le mensilità sono
-presentazione, non calcolo. Se richiedessero un ricalcolo, la pagina direbbe il contrario
-di quello che afferma.
+`calcola()` restituisce soltanto il risultato annuale. Il selettore **12/13/14 mensilità**
+passa quel risultato ad `applicaMensilita()`, che divide il netto annuo già calcolato.
+È la dimostrazione a schermo di una tesi del modello — le mensilità sono presentazione,
+non calcolo. Se richiedessero un ricalcolo, la pagina direbbe il contrario di quello che
+afferma.
+
+`soglie({ comune: codiceCatastale })` restituisce soltanto le discontinuità effettive:
+ogni elemento dichiara `ambito` (`nazionale`, `regionale` o `comunale`), imponibile,
+RAL, causa e variazione del netto. Le soglie normative sull'imponibile vengono convertite
+nella prima RAL che le supera usando contributi e arrotondamenti del motore; i normali
+cambi di scaglione progressivo, che modificano la pendenza ma non creano un salto, non
+sono inclusi. Senza opzioni il default resta Milano per compatibilità. La cache è separata
+per codice catastale.
 
 ## Come si pubblica
 

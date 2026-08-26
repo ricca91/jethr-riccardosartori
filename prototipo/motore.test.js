@@ -31,7 +31,7 @@ const assert=require('node:assert/strict');
 const M=require('./motore.js');
 const {calcola,applicaMensilita,parseRal,soglie,SALTI}=M;
 
-const netto=r=>calcola(r,13).kpi.nettoAnnuo;
+const netto=r=>calcola(r).kpi.nettoAnnuo;
 const voce=(res,id)=>res.voci.find(v=>v.id===id);
 const importo=(res,id)=>{const v=voce(res,id);return v?v.importo:0;};
 const c2=n=>Math.round(n*100)/100;
@@ -61,7 +61,7 @@ test.describe('A — correttezza (verificata a mano contro la norma)',()=>{
      Fonti: INPS circ. 101/2024 · L. 199/2025 art. 1 c. 3 · TUIR art. 13 ·
             L. 207/2024 art. 1 c. 6 · Regione Lombardia · Comune di Milano */
   test('RAL 35.000 — la catena voce per voce',()=>{
-    const r=calcola('35000',13);
+    const r=calcola('35000');
     assert.equal(r.imponibile,31783.50);
     assert.equal(importo(r,'ivs'),-3216.50);
     assert.equal(importo(r,'lorda'),-7688.56);
@@ -76,7 +76,7 @@ test.describe('A — correttezza (verificata a mano contro la norma)',()=>{
      a precisione piena la detrazione sarebbe 1.581,52 e il netto 26.032,21.
      È la differenza fra il valore canonico e i numeri citati nei ticket. */
   test('RAL 35.000 — il rapporto dell\'art. 13 è troncato, non arrotondato',()=>{
-    const r=calcola('35000',13);
+    const r=calcola('35000');
     assert.equal(c2(importo(r,'detrlav')-65),1581.48);
     assert.notEqual(c2(importo(r,'detrlav')-65),1581.52);
   });
@@ -86,7 +86,7 @@ test.describe('A — correttezza (verificata a mano contro la norma)',()=>{
      paga lo 0,8% sull'intero imponibile, non sull'eccedenza. Un centesimo
      lordo in più costa quindi ~184 € netti. È legge, non un bug. */
   test('RAL 25.327,61 → ,62 — l\'esenzione comunale è secca, non una franchigia',()=>{
-    const sotto=calcola('25327.61',13),sopra=calcola('25327.62',13);
+    const sotto=calcola('25327.61'),sopra=calcola('25327.62');
     assert.equal(sotto.imponibile,23000.00);
     assert.equal(sopra.imponibile,23000.01);
     assert.equal(importo(sotto,'addcom'),0);
@@ -98,14 +98,14 @@ test.describe('A — correttezza (verificata a mano contro la norma)',()=>{
      contributi, il 9,19% e l'1% sull'eccedenza oltre 56.224 €, perché la
      base è la stessa. Da qui la contribuzione regressiva. */
   test('RAL 122.295 e oltre — i contributi si fermano al massimale',()=>{
-    const tetto=calcola('122295',13);
+    const tetto=calcola('122295');
     // 122.295 × 9,19% = 11.238,91  +  (122.295 − 56.224) × 1% = 660,71
     assert.equal(tetto.kpi.totaleContributi,11899.62);
     for(const ral of ['122295.01','200000','1000000'])
-      assert.equal(calcola(ral,13).kpi.totaleContributi,11899.62);
+      assert.equal(calcola(ral).kpi.totaleContributi,11899.62);
     assert.equal(c2(tetto.aliquotaContributivaEffettiva),9.73);
-    assert.equal(c2(calcola('200000',13).aliquotaContributivaEffettiva),5.95);
-    assert.equal(c2(calcola('1000000',13).aliquotaContributivaEffettiva),1.19);
+    assert.equal(c2(calcola('200000').aliquotaContributivaEffettiva),5.95);
+    assert.equal(c2(calcola('1000000').aliquotaContributivaEffettiva),1.19);
   });
 
   /* Capienza: le detrazioni abbattono l'imposta, non sono rimborsabili.
@@ -113,12 +113,12 @@ test.describe('A — correttezza (verificata a mano contro la norma)',()=>{
      1.955 € — l'intera detrazione da lavoro dipendente pagata a chi non ha
      imposta da abbattere. Il caso è il test più economico dell'intera classe. */
   test('RAL 0 → netto 0 (capienza)',()=>{
-    assert.equal(calcola('0',13).kpi.nettoAnnuo,0);
+    assert.equal(calcola('0').kpi.nettoAnnuo,0);
   });
 
   test('fascia bassa — nessuna detrazione supera l\'IRPEF lorda',()=>{
     for(let ral=0;ral<=20000;ral+=250){
-      const r=calcola(String(ral),13);
+      const r=calcola(String(ral));
       const lorda=-importo(r,'lorda');
       const detr=importo(r,'detrlav')+importo(r,'detrult');
       assert.ok(detr<=lorda+1e-9,`RAL ${ral}: detrazioni ${detr} > IRPEF lorda ${lorda}`);
@@ -182,8 +182,8 @@ test.describe('B — comportamento ai limiti',()=>{
   test.describe('i sette salti, a ±0,01 dalla soglia',()=>{
     for(const s of SOGLIE_ATTESE){
       test(`${s.ral} — ${s.causa}`,()=>{
-        const sotto=calcola((Number(s.ral)-0.01).toFixed(2),13);
-        const sopra=calcola(s.ral,13);
+        const sotto=calcola((Number(s.ral)-0.01).toFixed(2));
+        const sopra=calcola(s.ral);
         const delta=c2(sopra.kpi.nettoAnnuo-sotto.kpi.nettoAnnuo);
         assert.equal(Math.sign(delta),Math.sign(s.delta),'il segno del salto');
         assert.ok(Math.abs(delta-s.delta)<=0.01,
@@ -241,11 +241,11 @@ test.describe('B — comportamento ai limiti',()=>{
       assert.equal(parseRal('35000.50'),'35000.50');
       assert.equal(parseRal('35.000'),'35000');
       assert.equal(parseRal('35 000 €'),'35000');
-      assert.equal(calcola(parseRal('35.000,50'),13).kpi.nettoAnnuo,
-                   calcola(parseRal('35000.50'),13).kpi.nettoAnnuo);
+      assert.equal(calcola(parseRal('35.000,50')).kpi.nettoAnnuo,
+                   calcola(parseRal('35000.50')).kpi.nettoAnnuo);
     });
     test('sette cifre → calcola, senza clamp silenzioso',()=>{
-      const r=calcola('9999999',13);
+      const r=calcola('9999999');
       assert.equal(r.kpi.totaleContributi,11899.62);
       assert.ok(r.kpi.nettoAnnuo>0&&r.kpi.nettoAnnuo<9999999);
     });
@@ -263,7 +263,7 @@ test.describe('C — non-regressione',()=>{
 
   const PASSO=100,MAX=200000;
   const campioni=[];
-  for(let ral=0;ral<=MAX;ral+=PASSO)campioni.push(calcola(String(ral),13));
+  for(let ral=0;ral<=MAX;ral+=PASSO)campioni.push(calcola(String(ral)));
 
   test(`riconciliazione su ${campioni.length} campioni (passo ${PASSO} €, 0–${MAX} €)`,()=>{
     for(const r of campioni){
@@ -304,22 +304,37 @@ test.describe('C — non-regressione',()=>{
   /* La tesi del contratto, resa verificabile: le mensilità sono presentazione.
      Se questo test diventasse rosso, la pagina direbbe il contrario di quello
      che afferma a schermo. */
-  test('invariante 12/13 — cambia la rata, non l\'anno',()=>{
+  test('calcola restituisce il risultato annuale, senza preferenze di presentazione',()=>{
+    const annuale=calcola('35000');
+    assert.deepEqual(annuale.input,{ral:35000,comune:'F205'});
+    assert.ok(!Object.hasOwn(annuale.kpi,'mediaMensile'));
+
+    const presentato=applicaMensilita(annuale);
+    assert.equal(presentato.input.mensilita,13);
+    assert.equal(presentato.kpi.mediaMensile,2002.47);
+  });
+
+  test('12, 13 e 14 cambiano la media, mai il risultato annuale',()=>{
     for(const ral of ['0','12000','26000','35000','60000','150000']){
-      const a13=calcola(ral,13),a12=calcola(ral,12);
-      assert.equal(a12.kpi.nettoAnnuo,a13.kpi.nettoAnnuo);
-      assert.equal(a12.kpi.totaleImposte,a13.kpi.totaleImposte);
-      assert.equal(a12.kpi.totaleContributi,a13.kpi.totaleContributi);
-      // applicare la mensilità senza ricalcolare dà lo stesso risultato
-      const applicato=applicaMensilita(a13,12);
-      assert.equal(applicato.kpi.nettoAnnuo,a13.kpi.nettoAnnuo);
-      assert.equal(applicato.kpi.mediaMensile,a12.kpi.mediaMensile);
-      assert.deepEqual(applicato.voci,a13.voci);
+      const annuale=calcola(ral);
+      for(const mensilita of [12,13,14]){
+        const presentato=applicaMensilita(annuale,mensilita);
+        assert.equal(presentato.input.mensilita,mensilita);
+        assert.equal(presentato.kpi.nettoAnnuo,annuale.kpi.nettoAnnuo);
+        assert.equal(presentato.kpi.totaleImposte,annuale.kpi.totaleImposte);
+        assert.equal(presentato.kpi.totaleContributi,annuale.kpi.totaleContributi);
+        assert.deepEqual(presentato.voci,annuale.voci);
+      }
     }
+    const annuale=calcola('35000');
+    assert.deepEqual([12,13,14].map(m=>applicaMensilita(annuale,m).kpi.mediaMensile),
+      [2169.35,2002.47,1859.44]);
+    for(const mensilita of [11,15,16])
+      assert.throws(()=>applicaMensilita(annuale,mensilita),RangeError);
   });
 
   test('la media è una media: 13 × rata non ricompone l\'anno',()=>{
-    const r=calcola('35000',13);
+    const r=applicaMensilita(calcola('35000'));
     assert.equal(r.kpi.mediaMensile,2002.47);
     assert.notEqual(c2(r.kpi.mediaMensile*13),r.kpi.nettoAnnuo);
   });
@@ -327,17 +342,18 @@ test.describe('C — non-regressione',()=>{
   /* Golden: rigenerato dal motore, non copiato. Congela il comportamento
      attuale nei punti di riferimento. Non dice che sono giusti — lo dice
      la categoria A. */
-  /* Il campo `fonte` di ogni voce e' una chiave che la pagina usa per pescare
-     la citazione dalla tabella FONTI. Le due cose vivono in file diversi:
-     rinominare una chiave qui rompe il pannello del dettaglio in silenzio.
-     Questo test blocca l'insieme delle chiavi che il motore puo' emettere. */
-  test('le chiavi delle fonti sono quelle che la pagina si aspetta',()=>{
-    const attese=['inps101','inps6','l199','tuir13','l207c4','l207c6','dl3','lomb','mi'];
+  /* Il campo `fonte` di ogni voce è una chiave che l'adapter Voce → Riga
+     risolve nel catalogo delle fonti. Il test dell'adapter verifica la copertura;
+     qui resta congelato l'insieme delle chiavi che il motore può emettere. */
+  test('le chiavi e le provenienze delle fonti sono quelle che la pagina si aspetta',()=>{
+    const attese=['inps101','inps6','l199','tuir13','l207c4','l207c6','dl3'];
     const viste=new Set();
-    for(let ral=0;ral<=200000;ral+=500)
-      for(const v of calcola(String(ral),13).voci)viste.add(v.fonte);
+    for(let ral=0;ral<=200000;ral+=500)for(const v of calcola(String(ral)).voci){
+      if(typeof v.fonte==='string')viste.add(v.fonte);
+      else assert.match(v.fonte.tipo,/^(regionale|comunale)$/);
+    }
     for(const k of viste)assert.ok(attese.includes(k),`fonte sconosciuta: ${k}`);
-    assert.deepEqual([...viste].sort(),attese.filter(k=>viste.has(k)).sort());
+    assert.deepEqual([...viste].sort(),attese.sort());
   });
 
   test('golden — netto annuo nei punti di riferimento',()=>{
@@ -594,7 +610,7 @@ test.describe('D — le voci da sole',()=>{
      è il campo su cui la guardia filtra. */
   test('ogni voce porta somma: nettoLavoratore',()=>{
     for(const ral of ['0','9000','20000','35000','60000','200000'])
-      for(const voce of calcola(ral,13).voci)
+      for(const voce of calcola(ral).voci)
         assert.equal(voce.somma,M.NETTO_LAVORATORE,`${ral} → ${voce.id}`);
   });
 });

@@ -6,14 +6,14 @@ difendibile il resto — che cosa **non** è provato.
 ## Come si esegue
 
 ```
-node --test prototipo/motore.test.js
+node --test prototipo/*.test.js
 ```
 
 Node 18 o successivo. Nessuna dipendenza, nessun `package.json`, niente da installare.
 Il motore (`prototipo/motore.js`) è uno script classico: la stessa riga di codice
 gira nella pagina aperta con un doppio clic e in Node, senza duplicati.
 
-Stato al 22 agosto 2026: **54 prove, tutte verdi** (Node v22.22.2).
+Stato al 25 agosto 2026: **61 prove, tutte verdi** (Node v22.22.2).
 
 Gli attrezzi di verifica stanno in `processo/attrezzi/`, e girano anche loro senza
 dipendenze:
@@ -22,7 +22,6 @@ dipendenze:
 node processo/attrezzi/confronto.js salva base.json      # fotografa 2.001 corse
 node processo/attrezzi/confronto.js confronta base.json  # le riesegue e le confronta
 node processo/attrezzi/mutazioni.js                      # rompe una voce alla volta
-node processo/attrezzi/frasi.js base.json                # le frasi della pagina
 ```
 
 ## Le quattro categorie, e perché stanno separate
@@ -45,7 +44,7 @@ il motore si spezza in voci che si possono esercitare una alla volta.
 | | Categoria | Che cosa prova | Come |
 |---|---|---|---|
 | **A** | Correttezza | che il numero è giusto | poche ancore, derivate a mano dalla norma e scritte per esteso nei commenti |
-| **B** | Comportamento ai limiti | che le discontinuità di legge ci sono tutte, con la causa giusta | i sette salti e i quattro cambi di pendenza, presi a un centesimo di distanza, più gli input estremi |
+| **B** | Comportamento ai limiti | che le discontinuità di legge ci sono tutte, con la causa giusta | le soglie nazionali e locali del comune scelto e i quattro cambi di pendenza, presi a un centesimo di distanza, più gli input estremi |
 | **C** | Non-regressione | che nessuno ha cambiato niente | 2.001 campioni a passo di 100 € da 0 a 200.000 €, più il golden |
 | **D** | Le voci da sole | che una voce sbagliata si vede *dove* è sbagliata | ogni funzione del contratto esercitata a un imponibile scelto, con soli numeri |
 
@@ -63,7 +62,7 @@ il motore si spezza in voci che si possono esercitare una alla volta.
 - **RAL 0 → netto 0.** Capienza: le detrazioni abbattono l'imposta ma non sono
   rimborsabili. Senza questo vincolo il netto a RAL 0 risulterebbe di 1.955 €.
 
-### B — le sette soglie, con la causa e non solo l'effetto
+### B — le soglie nazionali e locali, con la causa e non solo l'effetto
 
 Per ogni soglia il test controlla due cose: che il salto abbia il segno e la magnitudine
 attesi entro un centesimo, e che sia **la voce giusta a comparire o a sparire** — il
@@ -72,10 +71,10 @@ strutturale è la parte che un motore sbagliato ma internamente coerente non sup
 
 L'invariante di monotonicità è formulato in modo da non bocciare il motore giusto:
 
-> Il netto è continuo e crescente in RAL **ovunque tranne** nelle sette soglie note, e in
+> Il netto è continuo e crescente in RAL **ovunque tranne** nelle soglie note per il comune scelto, e in
 > ciascuna di esse il salto ha esattamente il segno e la magnitudine documentati.
 
-«Il netto cresce sempre» sarebbe falso: quattro dei sette salti vanno all'ingiù e sono
+«Il netto cresce sempre» sarebbe falso: diversi salti vanno all'ingiù e sono
 legge. Un test così boccerebbe l'implementazione corretta, e la reazione naturale sarebbe
 "aggiustare" un motore che funziona.
 
@@ -178,11 +177,10 @@ usciti dal motore per disegno, e vanno dichiarati all'invocazione con
 nascosta dentro l'attrezzo. I campi *nuovi* vengono elencati a parte, perché non hanno
 un prima con cui divergere.
 
-**Le frasi.** Escludendo `et` e `formula` resta scoperto proprio ciò che il #15 sposta:
-le parole a schermo. `processo/attrezzi/frasi.js` estrae il blocco `RIGHE` da
-`index.html`, lo esegue con le costanti del motore e ricompone titolo e formula di ogni
-voce di ogni corsa, confrontandoli con quelli che il motore scriveva prima: **23.916
-frasi, tutte identiche**.
+**Le Riga.** `prototipo/righe.test.js` attraversa la stessa seam usata dalla pagina:
+verifica una Riga per ogni Voce nello stesso ordine, copertura completa di identificativi
+e fonti, Capienza trasversale, errori fail-fast e alcuni testi rappresentativi. Nessun
+test estrae o esegue più codice dall'HTML.
 
 **La pagina vera.** Aperta a fianco della versione precedente e guidata dallo stesso
 copione — la catena intera e i pannelli di dettaglio a RAL 35.000: stesso testo, stessi
@@ -202,15 +200,18 @@ alternativo: la differenza è di quattro centesimi sulla detrazione, ed è *quan
 arrotonda, non *quanto* si applica.
 
 Per la stessa ragione i valori attesi dei test si **rigenerano dal motore** e non si
-ricopiano dai documenti a monte. Sei delle sette soglie cadono uno o due centesimi più
-in alto delle posizioni annotate durante la ricerca.
+ricopiano dai documenti a monte. Le soglie espresse dalla norma sull'imponibile vengono
+convertite nella prima RAL che le supera attraverso il motore, inclusi contributi e
+arrotondamenti. Le discontinuità regionali e comunali sono ricavate dalla regola
+normalizzata del comune scelto; scaglioni progressivi continui e agevolazioni personali
+non diventano soglie generali.
 
 ## L'estrazione del motore (#9)
 
 Il motore è stato tolto dalla pagina e messo in un file a parte per poterlo provare fuori
 dal browser. Per escludere che l'operazione avesse spostato un centesimo, la versione
 estratta è stata confrontata con quella originale su **20.019 punti** — passo di 10 € da
-0 a 200.000 €, più le sette soglie a un centesimo di distanza e gli input estremi —
+0 a 200.000 €, più le soglie del caso Milano a un centesimo di distanza e gli input estremi —
 confrontando l'oggetto risultato **intero**, non solo il netto: zero divergenze.
 
 ## Accessibilità: checklist manuale
@@ -240,6 +241,7 @@ su ciò che già sappiamo e nessuna su ciò che conta.
   la sola RAL non basta più, e l'input non può dirlo.
 - **Il 9,19% è una scelta di modello**, non un'aliquota universale: inquadramento INPS,
   settore, dimensione del datore e fondi speciali possono cambiarla.
-- **Un solo caso.** Milano, impiegato del settore privato, anno intero, tempo pieno,
+- **Un solo profilo personale.** Impiegato del settore privato, anno intero, tempo pieno,
   nessun familiare a carico, nessun altro reddito, nessun onere deducibile o detraibile.
-  Fuori da qui il calcolo non è dichiarato valido.
+  Regione e comune variano con la selezione; agevolazioni personali o categoriali restano
+  escluse anche quando compaiono nella fonte locale.

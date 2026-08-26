@@ -117,7 +117,7 @@ function esegui(cartella){
   let xml;
   try{
     xml=execFileSync(process.execPath,
-      ['--test','--test-reporter=junit',path.join(cartella,'motore.test.js')],
+      ['--test-reporter=junit',path.join(cartella,'motore.test.js')],
       {encoding:'utf8',stdio:['ignore','pipe','ignore']});
   }catch(e){xml=e.stdout||'';}
   const pila=[],caduti=[],tutti=[];
