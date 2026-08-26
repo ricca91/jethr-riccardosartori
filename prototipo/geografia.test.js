@@ -2,6 +2,9 @@ const test=require('node:test');
 const assert=require('node:assert/strict');
 const G=require('./geografia.js');
 
+const alfabetico=xs=>xs.map(x=>x.nome);
+const ordinato=nomi=>[...nomi].sort(new Intl.Collator('it',{sensitivity:'base'}).compare);
+
 test.describe('geografia nazionale normalizzata',()=>{
   test('espone 21 giurisdizioni, 110 raggruppamenti e 7.894 comuni attivi',()=>{
     assert.equal(G.regioni().length,21);
@@ -47,6 +50,12 @@ test.describe('geografia nazionale normalizzata',()=>{
     const milano=G.province(lombardia.id).find(p=>p.nome==='Milano');
     assert.ok(G.comuni(milano.id).some(c=>c.nome==='Milano'));
     assert.ok(G.comuni(milano.id).every(c=>c.provincia===milano.id));
+  });
+
+  test('restituisce regioni, province e comuni in ordine alfabetico italiano',()=>{
+    assert.deepEqual(alfabetico(G.regioni()),ordinato(alfabetico(G.regioni())));
+    assert.deepEqual(alfabetico(G.province()),ordinato(alfabetico(G.province())));
+    assert.deepEqual(alfabetico(G.comuni()),ordinato(alfabetico(G.comuni())));
   });
 
   test('fallisce su un codice non appartenente allo snapshot',()=>{
