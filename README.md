@@ -4,7 +4,7 @@ Prototipo per il task di selezione **AI Builder @ Jet HR**: da una RAL stima il 
 e mensile e mostra, voce per voce, contributi e imposte trattenuti.
 
 **[Apri la demo](https://jethr.riccsartori.com)** ·
-**[Leggi come l'ho costruita](https://jethr.riccsartori.com/come-ho-lavorato.html)**
+**[Leggi cosa è successo dopo](https://jethr.riccsartori.com/la-storia.html)**
 
 ## In trenta secondi
 
@@ -32,10 +32,10 @@ Non simula un cedolino: stima il carico annuale maturato sulla RAL.
 Esecuzione:
 
 ```sh
-node --test prototipo/motore.test.js
+node --test prototipo/*.test.js
 ```
 
-Stato verificato alla consegna: **32 test superati su 32**.
+Stato verificato: **61 test superati su 61**.
 
 ## Come orientarsi
 
@@ -44,7 +44,7 @@ Due cartelle: **il prodotto** e **il lavoro che c'è dietro**.
 ```
 prototipo/          IL PRODOTTO
   index.html          la pagina — doppio clic e funziona, senza installare niente
-  come-ho-lavorato.html  la nota di lavoro: perimetro, modello, verifica, limiti
+  la-storia.html      la storia: il post, i commenti, cosa ne è uscito, perimetro e limiti
   motore.js           il calcolo, separato per poterlo provare fuori dal browser
   motore.test.js      la matrice di prova
   README.md           le scelte di prodotto e di calcolo, spiegate
