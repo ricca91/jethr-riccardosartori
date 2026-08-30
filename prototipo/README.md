@@ -13,8 +13,10 @@ del 21 febbraio 2026.
 
 | File | Che cos'è |
 |---|---|
-| `index.html` | la pagina, autoportante |
+| `index.html` | la pagina |
+| `draftsman.css` | il design system delle tre pagine: token, componenti e caratteri incorporati |
 | `come-ho-lavorato.html` | la nota di lavoro: perimetro, modello, verifica, limiti |
+| `la-storia.html` | la storia: cosa è successo dopo la pubblicazione |
 | `motore.js` | il calcolo, separato per poterlo provare fuori dal browser |
 | `motore.test.js` | la matrice di prova |
 | `righe.js` | l'adapter che trasforma ogni Voce in una Riga |
@@ -27,11 +29,22 @@ del 21 febbraio 2026.
 
 ## Come si apre
 
-Doppio clic su `index.html`, tenendo `motore.js`, `righe.js` e `fonti.js` nella stessa cartella.
-Nessuna dipendenza, nessun passo di build, nessuna richiesta di rete: i caratteri
-Wix Madefor Display sono incorporati nel file, quindi la pagina funziona anche offline.
-Vale anche per `come-ho-lavorato.html`, che porta la propria copia dei caratteri per
-restare apribile da sola.
+Doppio clic su `index.html`, tenendo `draftsman.css`, `motore.js`, `righe.js` e `fonti.js`
+nella stessa cartella. Nessuna dipendenza, nessun passo di build, nessuna richiesta di rete:
+Archivo, Instrument Sans e JetBrains Mono sono incorporati in `draftsman.css`, quindi le
+pagine funzionano anche offline.
+
+Le tre pagine — `index.html`, `come-ho-lavorato.html` e `la-storia.html` — condividono
+`draftsman.css` invece di portare ciascuna la propria copia dei caratteri: 232 KB una volta
+sola contro i 480 KB che prima erano triplicati. Il prezzo è che `come-ho-lavorato.html` e
+`la-storia.html` non sono più apribili da sole: vogliono `draftsman.css` accanto. Un `<link>`
+si carica anche da `file://`, a differenza dei moduli ES.
+
+L'aspetto è **Draftsman**, il design system in
+`resources/design-systems/greptile-inspired-design-system`: raggio zero e angoli smussati,
+hairline tratteggiate, etichette mono fra parentesi, ombre a offset duro e **una sola sezione
+inchiostro per pagina** — il flusso del denaro nel calcolatore, il modello nella nota di
+lavoro, la coda nella storia.
 
 Il prototipo usa-e-getta del feedback visivo del pulsante **Calcola** si apre con
 `prototype-ral-feedback.html?variant=A`. Le varianti A, B e C si cambiano dalla barra
