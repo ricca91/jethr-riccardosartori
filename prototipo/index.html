@@ -153,6 +153,14 @@ body{padding-bottom:0}
 .legend i{width:10px;height:10px;display:inline-block;margin-right:8px;vertical-align:-1px;
   border:var(--bw) solid var(--line-solid)}
 
+/* --- flusso: il Pattern B del design system, il trittico d'inchiostro -----
+   Una sola sezione invertita per pagina. La carta puntinata resta accesa, il
+   titolo prende un accento, il corpo resta fog. */
+.sec--ink{background-color:var(--c-graphite-2)}
+.sec--ink h2{color:var(--c-blush)}
+.sec--ink .lead{max-width:60ch}
+.flow-voce .tag{margin-bottom:var(--s-3)}
+
 /* --- flusso (la sezione inchiostro, unica della pagina) ------------------- */
 .flowsvg{width:100%;height:auto;display:block;overflow:visible;font-family:var(--font-mono)}
 .flowsvg text{fill:var(--fg-muted);font-size:inherit}
@@ -516,6 +524,26 @@ function answerBlock(res){
     </div>
   </div>`;
 }
+/* La legenda del flusso segue il Pattern B: una riga a tacche con
+   l'etichetta al centro, poi le voci in un foglio a griglia con i tag
+   nei quattro accenti del sistema. Gli importi non si ripetono qui —
+   stanno già sulle fasce del diagramma. */
+function legendaFlusso(res){
+  const voci=[
+    ['tag--peri','Contributi','IVS al 9,19% e contributo aggiuntivo sopra la prima fascia'],
+    ['tag--blush','Imposte','IRPEF netta, più addizionale regionale e comunale'],
+    ['tag--flux','Netto','quello che resta, integrazioni comprese'],
+  ];
+  if(res.integrazioni>0)
+    voci.push(['tag--citron','Integrazioni','somma non imponibile e trattamento integrativo']);
+  return `<div class="ruler" data-label="dove finiscono i soldi" style="margin-top:var(--s-10)"></div>
+    <div class="grid-sheet grid-sheet--4" style="margin-top:var(--s-6);border-color:var(--line-strong)">
+      ${voci.map(([cls,t,d])=>`<div class="flow-voce">
+        <span class="tag ${cls}">${t}</span>
+        <p class="small muted" style="margin:0">${d}</p>
+      </div>`).join('')}
+    </div>`;
+}
 function legendItems(res){
   const it=[[C.contrib,'Contributi'],[C.tax,'Imposte'],[C.netto,'Netto']];
   if(res.integrazioni>0)it.push([C.integr,'Integrazioni di legge']);
@@ -717,7 +745,7 @@ function sezioni(res,st){
        ${avvisoMassimale(res)}`},
     {id:'flusso',ink:true,eye:'Livello 2 — il flusso',t:'Dove va il resto',
      lede:'Le fasce sono in scala: la larghezza di ogni flusso è proporzionale al suo importo. Si parte dalla RAL, non dal costo azienda: questo strumento risponde a «dove vanno i soldi trattenuti sul mio lordo», non a quanto costi all\'azienda. Clicca una fascia per aprirne le voci.',
-     body:`${sankey(res,260,12)}<div class="legend" style="margin-top:var(--s-8)">${legendItems(res)}</div>`},
+     body:`${sankey(res,260,12)}${legendaFlusso(res)}`},
     {id:'dettaglio',eye:'Livello 3 — il dettaglio',t:'Ogni euro, voce per voce',
      lede:'La catena completa, con gli operatori in chiaro. Ogni riga contrassegnata si apre: cliccala e la spiegazione compare qui a fianco.',
      body:chain(res,st)},
@@ -739,10 +767,10 @@ function pagina(res,st){
   /* Una sola sezione inchiostro per pagina: è tutto il budget di
      contrasto del sistema, e il flusso del denaro è il punto dove
      serve — il diagramma legge come un disegno tecnico. */
-  const sez=(s,i)=>`<section class="sec${s.ink?' sec--ink on-ink':''}" id="${s.id}">
+  const sez=(s,i)=>`<section class="sec${s.ink?' sec--ink on-ink paper':''}" id="${s.id}">
       <div class="pg">
         <span class="no">§ ${String(i+1).padStart(2,'0')}</span>
-        <div class="eyebrow">${s.eye}</div>
+        <div class="eyebrow${s.ink?' eyebrow--accent':''}">${s.eye}</div>
         <div class="sec-head"><h2>${s.t}</h2>${s.tool||''}</div>
         ${s.lede?`<p class="lead">${s.lede}</p>`:''}
         <div class="sec-body">${s.body}</div>
