@@ -66,7 +66,7 @@ richieste. Sono usciti sette filoni e sedici ticket, implementabili uno alla vol
 | Scelta del CCNL | 5 | aperto |
 | Nucleo familiare e figli a carico | 5 | fatto |
 | Premi di risultato e MBO | 3 | aperto |
-| Welfare e fringe benefit | 2 | aperto |
+| Welfare e fringe benefit | 2 | fatto |
 | Costo totale per l'azienda | 1 | aperto |
 
 A quel punto ho smesso di trattarli come commenti. Sono diventati
@@ -118,9 +118,9 @@ davvero, e per mettere insieme un portfolio fatto di cose che funzionano.
 La parte tecnica ridotta all'osso: quello che serve sapere prima di fidarsi di un numero con
 due decimali.
 
-**Il caso coperto.** Regole 2026, Milano, impiegato privato a tempo indeterminato, anno intero,
-un datore e un reddito. Nessun familiare a carico, nessun benefit, premio o agevolazione
-personale.
+**Il caso coperto.** Regole 2026, impiegato privato a tempo indeterminato, anno intero, un
+datore e un reddito. Comune, familiari a carico, welfare esente dichiarato, fringe benefit e
+buoni pasto sono selezionabili; premi e agevolazioni personali restano fuori.
 
 **Che numero è.** Il netto annuale maturato sulla RAL, e la sua media su 12, 13 o 14 mensilità.
 Non è la previsione del singolo cedolino né del bonifico che arriva a gennaio.
@@ -158,7 +158,7 @@ calcolatore pubblico — me l'hanno ricordato nei commenti — che questo non so
 node --test prototipo/*.test.js
 ```
 
-Stato verificato: **174 test superati su 174**.
+Stato verificato: **185 test superati su 185**.
 
 ## Come orientarsi
 

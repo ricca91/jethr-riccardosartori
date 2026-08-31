@@ -91,6 +91,18 @@ const formulaSuSoglia=(v,coda)=>
   `${senzaCentesimi(v.termini.importo)} × ${v.rapporto.toFixed(4)}${TRONCATO}\n${coda}`;
 
 const RICETTE={
+  welfare:{campi:['quotaEsente','quotaImponibile'],
+    titolo:()=>`Welfare aziendale esente dichiarato`,
+    formula:v=>`${formatta(v.quotaEsente)} € esenti — il calcolatore assume già soddisfatti i requisiti del piano aziendale`},
+  fringe:{campi:['soglia','figlioACarico','quotaEsente','quotaImponibile'],
+    titolo:()=>`Fringe benefit`,formula:v=>v.quotaImponibile>0
+      ?`valore ${formatta(v.base)} €, oltre la soglia ${senzaCentesimi(v.soglia)} € → intero valore imponibile: ${formatta(v.quotaImponibile)} €`
+      :`valore ${formatta(v.base)} €, entro la soglia ${senzaCentesimi(v.soglia)} € → interamente esente`},
+  buoni:{campi:['tipoBuoni','valoreUnitario','numero','sogliaUnitaria','quotaEsente','quotaImponibile'],
+    titolo:v=>`Buoni pasto ${v.tipoBuoni}`,
+    formula:v=>`${v.numero} × ${formatta(v.valoreUnitario)} € = ${formatta(v.base)} € · `+
+      `esente ${formatta(v.quotaEsente)} € · imponibile ${formatta(v.quotaImponibile)} € `+
+      `(limite ${formatta(v.sogliaUnitaria)} € per buono)`},
   ivs:{campi:['base','aliquota'],titolo:()=>`Contributi previdenziali IVS`,
     formula:v=>`${formatta(v.base)} × ${percentuale(v.aliquota,2)}`},
   ecc:{campi:['baseContributiva','soglia','aliquota'],

@@ -1,5 +1,5 @@
 /* ============================================================
-   MATRICE DI PROVA — motore RAL → netto, regole-2026-v1
+   MATRICE DI PROVA — motore RAL → netto, regole-2026-v4
    node --test prototipo/motore.test.js
 
    Tre categorie, etichettate perché provano cose diverse:
@@ -947,6 +947,91 @@ test.describe('E — le soglie con un nucleo dichiarato',()=>{
     const due=soglie({comune:'F205',nucleo:NUCLEO});
     assert.notDeepEqual(uno,due);
     assert.deepEqual(soglie({comune:'F205',nucleo:[{tipo:'coniuge'}]}),uno);
+  });
+});
+
+/* ============================================================
+   F — BENEFIT E VALORE DEL PACCHETTO (#26)
+   ============================================================ */
+test.describe('F — welfare, fringe benefit e buoni pasto',()=>{
+  test('senza benefit i numeri storici restano invariati',()=>{
+    const prima=calcola('35000');
+    const dopo=calcola('35000',{welfare:0,fringe:0,
+      buoniPasto:{tipo:'elettronici',valoreUnitario:0,numero:0}});
+    assert.equal(dopo.kpi.nettoInBusta,prima.kpi.nettoAnnuo);
+    assert.equal(dopo.kpi.nettoAnnuo,26032.17);
+    assert.equal(dopo.kpi.benefitSpendibili,0);
+    assert.equal(dopo.kpi.valorePacchetto,26032.17);
+    assert.equal(dopo.imponibile,prima.imponibile);
+  });
+
+  test('il welfare dichiarato esente aumenta il pacchetto, non il netto o l’imponibile',()=>{
+    const senza=calcola('35000'),con=calcola('35000',{welfare:1200});
+    assert.equal(con.kpi.nettoInBusta,senza.kpi.nettoAnnuo);
+    assert.equal(con.imponibile,senza.imponibile);
+    assert.equal(con.kpi.benefitSpendibili,1200);
+    assert.equal(con.kpi.valorePacchetto,27232.17);
+    assert.deepEqual(voce(con,'welfare'),{
+      id:'welfare',tipo:'benefit',somma:'benefitSpendibili',base:1200,importo:1200,
+      fonte:'tuir51welfare',quotaEsente:1200,quotaImponibile:0,
+    });
+  });
+
+  test('fringe: un centesimo sotto e sopra la soglia rende imponibile l’intero valore',()=>{
+    const sotto=calcola('35000',{fringe:999.99});
+    const sopra=calcola('35000',{fringe:1000.01});
+    assert.equal(voce(sotto,'fringe').soglia,1000);
+    assert.equal(voce(sotto,'fringe').quotaImponibile,0);
+    assert.equal(voce(sopra,'fringe').quotaImponibile,1000.01);
+    assert.equal(sotto.imponibile,31783.50);
+    assert.ok(sopra.imponibile>31783.50);
+    assert.ok(sopra.kpi.nettoInBusta<sotto.kpi.nettoInBusta);
+    assert.equal(sopra.kpi.benefitSpendibili,1000.01);
+  });
+
+  test('un figlio fiscalmente a carico porta la soglia fringe a 2.000 euro',()=>{
+    const nucleo=[{tipo:'figlio',eta:22,reddito:0}];
+    const sotto=calcola('35000',{fringe:1999.99,nucleo});
+    const sopra=calcola('35000',{fringe:2000.01,nucleo});
+    assert.equal(voce(sotto,'fringe').soglia,2000);
+    assert.equal(voce(sotto,'fringe').quotaImponibile,0);
+    assert.equal(voce(sopra,'fringe').quotaImponibile,2000.01);
+  });
+
+  test('buoni elettronici da 10 euro: valore pieno spendibile, eccedenza imponibile',()=>{
+    const r=calcola('35000',{buoniPasto:{tipo:'elettronici',valoreUnitario:10,numero:200}});
+    const b=voce(r,'buoni');
+    assert.equal(b.valoreUnitario,10);
+    assert.equal(b.numero,200);
+    assert.equal(b.sogliaUnitaria,8);
+    assert.equal(b.quotaEsente,1600);
+    assert.equal(b.quotaImponibile,400);
+    assert.equal(b.importo,2000);
+    assert.equal(r.kpi.benefitSpendibili,2000);
+    assert.equal(r.kpi.mediaMensileBuoni,166.67);
+  });
+
+  test('buoni cartacei ed elettronici hanno soglie separate',()=>{
+    const cartacei=calcola('35000',{buoniPasto:{tipo:'cartacei',valoreUnitario:6,numero:10}});
+    const elettronici=calcola('35000',{buoniPasto:{tipo:'elettronici',valoreUnitario:6,numero:10}});
+    assert.equal(voce(cartacei,'buoni').quotaImponibile,20);
+    assert.equal(voce(elettronici,'buoni').quotaImponibile,0);
+  });
+
+  test('gli input benefit negativi o malformati fermano il calcolo',()=>{
+    assert.throws(()=>calcola('35000',{welfare:-1}),/welfare/i);
+    assert.throws(()=>calcola('35000',{fringe:-1}),/fringe/i);
+    assert.throws(()=>calcola('35000',{buoniPasto:{tipo:'monopattino',valoreUnitario:8,numero:10}}),/buoni/i);
+    assert.throws(()=>calcola('35000',{buoniPasto:{tipo:'elettronici',valoreUnitario:8,numero:-1}}),/buoni/i);
+  });
+
+  test('le soglie dichiarano la RAL coerente con le quote imponibili dei benefit',()=>{
+    const milano=xs=>xs.find(s=>s.ambito==='comunale');
+    const senza=milano(soglie({comune:'F205'}));
+    const con=milano(soglie({comune:'F205',fringe:1000.01}));
+    assert.ok(con.ral<senza.ral);
+    assert.equal(calcola((con.ral-.01).toFixed(2),{comune:'F205',fringe:1000.01}).imponibile,23000);
+    assert.equal(calcola(con.ral.toFixed(2),{comune:'F205',fringe:1000.01}).imponibile,23000.01);
   });
 });
 

@@ -68,6 +68,8 @@ body{padding-bottom:0}
 .nucleo-dis{width:78px;text-align:center}
 .nucleo-imp{white-space:nowrap;font-weight:600}
 .nucleo-perche{font-size:var(--t-xs);color:var(--fg-muted);max-width:36ch}
+.benefit-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-5)}
+.benefit-subgrid{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-3)}
 .nucleo-x{border:0;background:none;cursor:pointer;font:400 var(--t-sm)/1 var(--font-mono);
   color:var(--fg-muted);padding:8px 10px}
 .nucleo-x:hover{background:var(--c-signal-red);color:var(--c-graphite)}
@@ -94,6 +96,7 @@ body{padding-bottom:0}
   .nucleo-perche{max-width:none}
   .nucleo-eta,.nucleo-red{width:130px}
   .nucleo-dis{width:auto;text-align:left}
+  .benefit-grid{grid-template-columns:1fr}
   .nucleo-tab .select{width:auto;min-width:190px}
 }
 
@@ -282,7 +285,7 @@ body{padding-bottom:0}
    ============================================================ */
 const LIMITI=[
   ['Il 9,19% è una scelta di modello','Non è l\'aliquota di ogni impiegato privato: inquadramento INPS, settore, dimensione del datore e fondi speciali possono cambiarla. Qui si assume FPLD ordinario, senza contribuzioni settoriali.'],
-  ['«RAL» non è una base legale autonoma','È una convenzione retributiva. Il calcolo assume RAL = imponibile previdenziale = imponibile fiscale prima dei contributi, senza componenti variabili, benefit o rimborsi.'],
+  ['«RAL» non è una base legale autonoma','È una convenzione retributiva. Senza benefit imponibili il calcolo assume RAL = imponibile previdenziale prima dei contributi. Le quote imponibili di fringe e buoni pasto dichiarate vengono aggiunte esplicitamente alla base; restano fuori componenti variabili e rimborsi.'],
   ['Competenza, non cassa','È il carico maturato sulla RAL 2026, non il denaro trattenuto nei cedolini del 2026: le addizionali si pagano a rate dopo il conguaglio. Per questo la cifra mensile è una media, non l\'importo di una busta paga.'],
   ['Sopra 122.295 € si assume la prima iscrizione dal 1996','Il massimale contributivo vale solo per chi è privo di anzianità al 31/12/1995. È l\'unico punto in cui la sola RAL non basta più.'],
   ['Le detrazioni di famiglia valgono per l\'anno intero','L\'art. 12 c. 3 le rapporta a mese: qui si assume che le condizioni valgano per tutti i dodici, e che la detrazione spetti per intero al dichiarante — la lett. c) la ripartisce al 50% fra i genitori, salvo accordo diverso. La quota degli ascendenti è assunta intera e non ripartita con altri aventi diritto, e il reddito complessivo del dichiarante è approssimato con l\'imponibile IRPEF. Resta fuori il caso dei familiari residenti all\'estero di contribuente extra-UE (art. 12 c. 2-bis).'],
@@ -293,7 +296,10 @@ const FAQ=[
   ['Perché scegliere 12, 13 o 14 mensilità non cambia il netto annuo?','Perché non è un dato di calcolo: è solo il divisore con cui si presenta lo stesso netto annuo. Le trattenute non cambiano. Puoi verificarlo qui sopra — cambiando il selettore il netto annuo resta identico e si muove solo la media. Se cambiasse, sarebbe un errore.'],
   ['Perché a volte un euro lordo in più fa <em>scendere</em> il netto?',stato=>{
     const geo=GEOGRAFIA_ITALIA.risolvi(stato.comune);
-    const comunali=nucleo=>soglie({comune:stato.comune,nucleo}).filter(s=>s.ambito==='comunale');
+    const numero=raw=>Number(parseRal(raw)||0);
+    const benefit={fringe:numero(stato.fringeRaw),buoniPasto:{tipo:stato.buoniTipo,
+      valoreUnitario:numero(stato.buoniValoreRaw),numero:Number(stato.buoniNumeroRaw||0)}};
+    const comunali=nucleo=>soglie({comune:stato.comune,nucleo,...benefit}).filter(s=>s.ambito==='comunale');
     const locali=comunali(stato.nucleo);
     if(!locali.length){
       /* Un salto che c'è per un contribuente solo può non esserci
@@ -313,7 +319,7 @@ const FAQ=[
   ['Ho un figlio di 15 anni: perché non compare nessuna detrazione?','Perché dal 2022, sotto i <b>21 anni</b>, la detrazione per figli a carico non esiste più: è assorbita dall\'<b>Assegno Unico e Universale</b>, che si chiede all\'INPS e non passa dalla busta paga. La detrazione dell\'art. 12 TUIR riprende dai 21 anni compiuti e si ferma ai 30. Non è un buco del calcolatore: è dove la norma ha spostato il sostegno.'],
   ['Le regioni e i comuni contano i figli?','Sì, e non tutti allo stesso modo. <b>Trento, Bolzano, Sardegna, Campania, Piemonte e Puglia</b> aggiungono una detrazione dall\'addizionale regionale per ogni figlio a carico, con importi, tetti di reddito e numeri minimi di figli diversi fra loro. <b>Marche e Veneto</b> non detraggono: applicano un\'<b>aliquota più bassa</b> se in famiglia c\'è una persona con disabilità accertata. Sei comuni del Veronese — <b>Bardolino, Bosco Chiesanuova, Bovolone, Negrar di Valpolicella, Roverè Veronese e Zevio</b> — non applicano l\'addizionale comunale alle famiglie numerose, con una soglia di esenzione che sale di 10.000 € per ogni figlio oltre il minimo. Tutte queste regole entrano nel calcolo solo se dichiari i familiari qui sopra.'],
   ['Quando un familiare è «a carico»?','Quando il suo reddito complessivo non supera <b>2.840,51 €</b> l\'anno, elevati a <b>4.000 €</b> per i figli fino a 24 anni. Sopra quella soglia il familiare non è a carico e la detrazione non spetta, anche se convive. Gli «altri familiari» dell\'art. 12 sono oggi i soli <b>ascendenti conviventi</b>: genitori e nonni che vivono con te.'],
-  ['Cosa non è incluso nel calcolo?','TFR, costo azienda e contributi del datore, INAIL, CCNL e fondi di solidarietà, fondi sanitari e previdenza complementare, altri redditi, oneri deducibili e detraibili, benefit, premi e agevolazioni personali. I familiari a carico si dichiarano nel modulo qui sopra; tutto il resto non è ricavabile dalla sola RAL, e chiederlo significherebbe un modulo lungo prima del primo risultato.'],
+  ['Cosa non è incluso nel calcolo?','TFR, costo azienda e contributi del datore, INAIL, CCNL e fondi di solidarietà, fondi sanitari e previdenza complementare, altri redditi, oneri deducibili e detraibili, premi e agevolazioni personali. Welfare esente dichiarato, fringe benefit e buoni pasto si inseriscono nel modulo; il calcolatore non certifica i requisiti del piano welfare.'],
   ['Da dove vengono le regole?','Solo da fonti primarie: Istat per i comuni attivi, MEF per le addizionali locali, leggi di bilancio, TUIR e circolari INPS. Ogni voce del dettaglio rimanda al riferimento ufficiale applicato.'],
 ];
 const SEZIONI=[['risultato','Risultato'],['flusso','Il flusso'],['dettaglio','Il dettaglio'],['metodo','Metodo e fonti'],['faq','Domande frequenti']];
@@ -459,6 +465,37 @@ function nucleoBlocco(stato){
   </div>`;
 }
 
+function benefitBlocco(stato){
+  const denaro=(id,label,value,help)=>`<div class="field">
+    <label class="label" for="${id}">${label}</label><div class="ingroup"><span class="affix">€</span>
+    <input class="input" id="${id}" inputmode="decimal" autocomplete="off" value="${esc(value)}" placeholder="0"></div>
+    <p class="hint">${help}</p></div>`;
+  return `<div class="nucleo-box">
+    <div class="section-label"><span>Pacchetto retributivo</span><i></i></div>
+    <div class="benefit-grid">
+      ${denaro('welfare','Welfare aziendale annuo',stato.welfareRaw,
+        'Valore già qualificato come esente: non entra nel denaro in busta.')}
+      ${denaro('fringe','Fringe benefit annui',stato.fringeRaw,
+        'Oltre la soglia applicabile, l’intero valore diventa imponibile.')}
+      <div class="field"><label class="label" for="buoni-tipo">Buoni pasto</label>
+        <select class="select" id="buoni-tipo">
+          <option value="elettronici" ${stato.buoniTipo==='elettronici'?'selected':''}>Elettronici</option>
+          <option value="cartacei" ${stato.buoniTipo==='cartacei'?'selected':''}>Cartacei</option>
+        </select>
+        <div class="benefit-subgrid" style="margin-top:var(--s-3)">
+          <div><label class="xs mono" for="buoni-valore">Valore unitario (€)</label>
+            <input class="input" id="buoni-valore" inputmode="decimal" value="${esc(stato.buoniValoreRaw)}" placeholder="0"></div>
+          <div><label class="xs mono" for="buoni-numero">Numero annuo</label>
+            <input class="input" id="buoni-numero" inputmode="numeric" value="${esc(stato.buoniNumeroRaw)}" placeholder="0"></div>
+        </div>
+        <p class="hint">Esenti fino a 8 € elettronici o 4 € cartacei per buono.</p></div>
+    </div>
+    <div class="callout callout--warn nucleo-nota"><span class="callout__mark">Limite</span><div>
+      Il welfare è inserito come valore <b>già qualificato come esente</b>: il calcolatore non verifica
+      categoria, destinatari o requisiti del piano aziendale.</div></div>
+  </div>`;
+}
+
 function form(st){
   const err=st.errore?`<p class="error-text" role="alert">${esc(st.errore)}</p>`:'';
   const province=GEOGRAFIA_ITALIA.province(st.regione),comuni=GEOGRAFIA_ITALIA.comuni(st.provincia);
@@ -494,6 +531,7 @@ function form(st){
         <select class="select" id="comune">${opts(comuni,st.comune,x=>x.nome)}</select></div>
     </div>
     ${nucleoBlocco(st)}
+    ${benefitBlocco(st)}
     <hr class="rule" style="margin:26px 0">
     <div class="calcrow">
       <button class="btn btn--primary btn--lg" id="go">Calcola</button>
@@ -518,7 +556,10 @@ function kpis(res,lead){
   const cell=(l,v,cls)=>`<div class="${cls||''}">
     <div class="tile__value">${v}</div><div class="tile__label">${l}</div></div>`;
   return `<div class="kpigrid">
-    ${cell('Netto annuo',eur(k.nettoAnnuo),lead?'kpi-lead':'')}
+    ${cell('Netto in busta',eur(k.nettoInBusta),lead?'kpi-lead':'')}
+    ${cell('Valore totale del pacchetto',eur(k.valorePacchetto))}
+    ${cell('Benefit spendibili',eur(k.benefitSpendibili))}
+    ${res.voci.some(v=>v.id==='buoni')?cell('Buoni: media mensile',eur(k.mediaMensileBuoni)):''}
     ${cell(`Media su ${res.input.mensilita}`,eur(k.mediaMensile))}
     ${cell('Totale imposte',eur(k.totaleImposte))}
     ${cell('Totale contributi',eur(k.totaleContributi))}
@@ -531,7 +572,9 @@ function answerBlock(res){
       <div class="tile__label" style="margin-top:0">Netto, media su ${res.input.mensilita} mensilità</div>
       <div class="big">${eur(res.kpi.mediaMensile)}</div>
       <p class="small muted" style="margin:14px 0 0;max-width:44ch">
-        Su una RAL di <b>${eur(res.input.ral)}</b> restano <b>${eur(res.kpi.nettoAnnuo)}</b> l'anno.</p>
+        Su una RAL di <b>${eur(res.input.ral)}</b> restano <b>${eur(res.kpi.nettoInBusta)}</b> in denaro.
+        ${res.kpi.benefitSpendibili>0?`Con <b>${eur(res.kpi.benefitSpendibili)}</b> di benefit spendibili,
+        il pacchetto vale <b>${eur(res.kpi.valorePacchetto)}</b>.`:''}</p>
     </div>
     <div>
       ${stackbar(res)}
@@ -582,7 +625,8 @@ function sankey(res,h,fs){
   if(ral<=0)return '<p class="small muted">Nessun flusso da mostrare.</p>';
   const H=h||260,W=780,NW=12,GAP=28,top=36,tot=ral+ig,sc=(H-top-16)/tot,FS=fs||13;
   const x1=6,x2=384,x3=W-NW-6;
-  const hRal=ral*sc,hIg=ig*sc,hCo=co*sc,hIm=im*sc,hTx=tx*sc,hNe=ne*sc;
+  const denaroDopoContributi=ral-co;
+  const hRal=ral*sc,hIg=ig*sc,hCo=co*sc,hIm=denaroDopoContributi*sc,hTx=tx*sc,hNe=ne*sc;
   const yRal=top,yIg=top+hRal+GAP,yCo=top,yIm=top+hCo+GAP,yTx=top,yNe=top+hTx+GAP;
   /* Sul fondo inchiostro i pastelli vanno tenuti alti: sotto il .4
      si impastano nel grafite e il diagramma diventa monocromo. */
@@ -605,11 +649,11 @@ function sankey(res,h,fs){
     ${lab(x1,yRal,'RAL',ral,'start')}
     ${ig>0?lab(x1,yIg,'Integrazioni di legge',ig,'start'):''}
     ${lab(x2,yCo,'Contributi',co,'start')}
-    ${lab(x2,yIm,'Imponibile IRPEF',im,'start')}
+    ${lab(x2,yIm,'Denaro dopo i contributi',denaroDopoContributi,'start')}
     ${lab(x3+NW,yTx,'Imposte',tx,'end')}
     ${lab(x3+NW,yNe,'Netto annuo',ne,'end')}
   </svg>
-  <p class="sr">Equivalente testuale: RAL ${eur(ral)}, meno contributi ${eur(co)}, imponibile ${eur(im)},
+  <p class="sr">Equivalente testuale: RAL ${eur(ral)}, imponibile fiscale ${eur(im)}, meno contributi ${eur(co)},
     meno imposte ${eur(tx)}${ig>0?`, più integrazioni di legge ${eur(ig)}`:''}, netto annuo ${eur(ne)}.</p>`;
 }
 
@@ -633,6 +677,9 @@ function chain(res,st){
   const rigaVoce=(op,id)=>{const x=v(id),rx=r(id);if(x)row(op,rx.titolo,x.importo,x);};
   grp('Dalla RAL all\'imponibile');
   row('','RAL',res.input.ral,null);
+  const quotaImponibileBenefit=res.voci.filter(x=>x.somma==='benefitSpendibili')
+    .reduce((tot,x)=>tot+(x.quotaImponibile||0),0);
+  if(quotaImponibileBenefit>0)row('+','Quote imponibili dei benefit',quotaImponibileBenefit,null);
   rigaVoce('−','ivs');
   rigaVoce('−','ecc');
   row('=','Imponibile IRPEF',res.imponibile,null,'sub');
@@ -653,6 +700,11 @@ function chain(res,st){
     rigaVoce('+','ti');}
   rows.push(`<tr class="tot"><td class="op">=</td><td>Netto annuo</td>
     <td class="amt">${eur(res.kpi.nettoAnnuo)}</td></tr>`);
+  const benefitVoci=res.voci.filter(x=>x.somma==='benefitSpendibili');
+  if(benefitVoci.length){grp('Benefit spendibili');
+    for(const x of benefitVoci)row('+',r(x.id).titolo,x.importo,x);
+    rows.push(`<tr class="tot"><td class="op">=</td><td>Valore totale del pacchetto</td>
+      <td class="amt">${eur(res.kpi.valorePacchetto)}</td></tr>`);}
   const sel=st.aperta?res.voci.find(x=>x.id===st.aperta):null;
   const rigaSel=sel?r(sel.id):null;
   const pane=sel?(()=>{const fonte=rigaSel.fonte;
@@ -689,7 +741,7 @@ function avvisoMassimale(res){
 }
 function metodo(stato=st){
   const geo=GEOGRAFIA_ITALIA.risolvi(stato.comune);
-  const fontiMetodo=[...Object.values(FONTI).slice(0,7),
+  const fontiMetodo=[...Object.values(FONTI).slice(0,-2),
     ['Istat — comuni italiani',`${geo.meta.istat.comuni} comuni attivi dal ${geo.meta.istat.vigenteDal}`,geo.meta.istat.url],
     ['MEF — addizionale regionale',`Regola 2026 per ${geo.regione.nome}`,geo.regionale.fonte.url],
     ['MEF — addizionale comunale',`Regola ${geo.comunale.fonte.annoOrigine} per ${geo.comune.nome}, ${geo.comunale.fonte.stato}`,geo.comunale.fonte.url]];
@@ -701,7 +753,7 @@ function metodo(stato=st){
       IRPEF netta, addizionali — dovute solo se l'IRPEF netta è positiva — e integrazioni di legge.
       Aritmetica decimale al centesimo, mai in virgola mobile binaria; il netto è definito come la somma
       delle voci arrotondate, così la tabella chiude sempre per costruzione.
-      Versione delle regole: <span class="tag">regole-2026-v2</span></p>
+      Versione delle regole: <span class="tag">regole-2026-v4</span></p>
     </div>
     <div>
       <h3 style="margin:0 0 14px">Cifre chiave 2026</h3>
@@ -828,6 +880,7 @@ const GEO_DEFAULT=GEOGRAFIA_ITALIA.risolvi('F205');
 const st={ralRaw:'35.000',mensilita:13,regione:GEO_DEFAULT.provincia.regione,
   provincia:GEO_DEFAULT.comune.provincia,comune:GEO_DEFAULT.comune.catastale,
   nucleo:[],nucleoCalcolato:null,
+  welfareRaw:'',fringeRaw:'',buoniTipo:'elettronici',buoniValoreRaw:'',buoniNumeroRaw:'',
   aperta:null,attiva:'risultato',res:null,errore:null,dirty:false,eggPending:false};
 
 function fromURL(){
@@ -836,6 +889,11 @@ function fromURL(){
     st.regione=g.provincia.regione;st.provincia=g.comune.provincia;st.comune=g.comune.catastale;}catch{}}
   if(p.get('ral'))st.ralRaw=p.get('ral');
   if(p.get('n'))st.nucleo=deserializzaNucleo(p.get('n'));
+  if(p.has('w'))st.welfareRaw=p.get('w');
+  if(p.has('f'))st.fringeRaw=p.get('f');
+  if(['elettronici','cartacei'].includes(p.get('bt')))st.buoniTipo=p.get('bt');
+  if(p.has('bv'))st.buoniValoreRaw=p.get('bv');
+  if(p.has('bn'))st.buoniNumeroRaw=p.get('bn');
   const mensilita=Number(p.get('m'));
   if(MENSILITA_AMMESSE.includes(mensilita))st.mensilita=mensilita;
   if(p.get('calc')==='1')commit(true);
@@ -847,6 +905,11 @@ function toURL(){
      prima: la funzione è additiva anche nell'URL. */
   const nucleo=serializzaNucleo(st.nucleo);
   if(nucleo)p.set('n',nucleo);
+  if(st.welfareRaw)p.set('w',st.welfareRaw);
+  if(st.fringeRaw)p.set('f',st.fringeRaw);
+  if(st.buoniTipo!=='elettronici')p.set('bt',st.buoniTipo);
+  if(st.buoniValoreRaw)p.set('bv',st.buoniValoreRaw);
+  if(st.buoniNumeroRaw)p.set('bn',st.buoniNumeroRaw);
   if(st.res)p.set('calc','1');
   history.replaceState(null,'','?'+p.toString()+(st.res?'#risultato':''));
 }
@@ -857,12 +920,21 @@ function scrollAlRisultato(){
 function commit(silenzioso){
   st.errore=null;
   const v=parseRal(st.ralRaw);
+  const opzionale=raw=>raw.trim()===''?'0':parseRal(raw);
+  const welfare=opzionale(st.welfareRaw),fringe=opzionale(st.fringeRaw);
+  const valoreBuono=opzionale(st.buoniValoreRaw);
+  const numeroBuoni=st.buoniNumeroRaw===''?0:Number(st.buoniNumeroRaw);
   if(v===null){st.errore='Inserisci la RAL per calcolare.';st.res=null;}
   else if(Number.isNaN(v)){st.errore='Solo cifre: usa la virgola per i decimali, per esempio 35.000,50.';st.res=null;}
   else if(Number(v)<0){st.errore='La RAL non può essere negativa.';st.res=null;}
+  else if([welfare,fringe,valoreBuono].some(x=>Number.isNaN(x)||Number(x)<0)){
+    st.errore='Welfare, fringe benefit e valore dei buoni devono essere importi positivi.';st.res=null;}
+  else if(!Number.isInteger(numeroBuoni)||numeroBuoni<0){
+    st.errore='Il numero annuo di buoni pasto deve essere un numero intero positivo.';st.res=null;}
   else if(Number(v)===4700000){st.res=null;st.dirty=false;st.eggPending=true;}
   else if(Number(v)>1000000){st.errore='Il calcolo è disponibile fino a una RAL di 1.000.000 €.';st.res=null;}
-  else{st.res=applicaMensilita(calcola(v,{comune:st.comune,nucleo:st.nucleo}),st.mensilita);
+  else{st.res=applicaMensilita(calcola(v,{comune:st.comune,nucleo:st.nucleo,
+      welfare,fringe,buoniPasto:{tipo:st.buoniTipo,valoreUnitario:valoreBuono,numero:numeroBuoni}}),st.mensilita);
     st.nucleoCalcolato=serializzaNucleo(st.nucleo);st.dirty=false;st.eggPending=false;
     if(!st.aperta)st.aperta='ivs';}   // mostra subito a cosa serve il pannello
   if(!silenzioso){
@@ -926,6 +998,9 @@ function segnaSporco(campo){
 document.addEventListener('input',e=>{
   const d=e.target.dataset||{};
   if(e.target.id==='ral'){st.ralRaw=e.target.value;return segnaSporco(e.target);}
+  const benefitInput={welfare:'welfareRaw',fringe:'fringeRaw',
+    'buoni-valore':'buoniValoreRaw','buoni-numero':'buoniNumeroRaw'}[e.target.id];
+  if(benefitInput){st[benefitInput]=e.target.value;return segnaSporco(e.target);}
   /* Età e reddito non ridisegnano la pagina a ogni cifra: il campo
      resta quello che l'utente sta scrivendo, cursore compreso. */
   if(d.nucleoEta!==undefined){
@@ -942,6 +1017,9 @@ document.addEventListener('input',e=>{
   }
 });
 document.addEventListener('change',e=>{
+  if(e.target.id==='buoni-tipo'){
+    st.buoniTipo=e.target.value;if(st.res)st.dirty=true;return render(true);
+  }
   const disabilita=e.target.dataset&&e.target.dataset.nucleoDisabilita;
   if(disabilita!==undefined&&disabilita!==null){
     st.nucleo[Number(disabilita)].disabilita=e.target.checked;
@@ -990,7 +1068,8 @@ document.addEventListener('click',e=>{
   if(!t)return;
   if(t.id==='go')return commit();
   if(t.id==='reset'){st.res=null;st.ralRaw='';st.aperta=null;st.errore=null;
-    st.nucleo=[];st.nucleoCalcolato=null;return render();}
+    st.nucleo=[];st.nucleoCalcolato=null;st.welfareRaw='';st.fringeRaw='';
+    st.buoniTipo='elettronici';st.buoniValoreRaw='';st.buoniNumeroRaw='';return render();}
   if(t.hasAttribute('data-m')){
     st.mensilita=Number(t.dataset.m);
     // Mensilita' e' presentazione, non calcolo: si divide il netto annuo

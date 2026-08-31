@@ -27,6 +27,25 @@ La parte spesso confusa è che i **contributi previdenziali non sono imposte**: 
 
 La RAL è una convenzione retributiva, non una base legale autonoma di calcolo. Le basi effettive possono differire per superminimo, straordinari, premi, benefit, rimborsi, welfare, auto aziendale, premi di risultato e voci CCNL. Fiscalmente il reddito di lavoro dipendente comprende in generale tutte le somme e i valori percepiti in relazione al rapporto; la norma elenca anche le esclusioni, inclusi i contributi previdenziali obbligatori. [TUIR, art. 51](https://www.normattiva.it/uri-res/N2Ls?urn%3Anir%3Apresidente.repubblica%3Adecreto%3A1986%3B917~art51=)
 
+## Welfare, fringe benefit e buoni pasto — 2026
+
+Sono tre fatti distinti, anche quando il datore li raccoglie sotto la stessa etichetta.
+
+- **Welfare aziendale.** Le lettere f–f-quater dell'art. 51 c. 2 escludono dal reddito opere,
+  servizi e prestazioni diverse, a condizioni diverse. Non esiste un plafond generale che il
+  calcolatore possa verificare da un solo importo: l'input `welfare` è quindi il valore che
+  l'utente dichiara **già qualificato come esente**. [TUIR, art. 51](https://www.normattiva.it/uri-res/N2Ls?urn%3Anir%3Astato%3Alegge%3A1986%3B917~art51=)
+- **Fringe benefit.** Per il 2025, 2026 e 2027 il limite complessivo è 1.000 €, elevato a
+  2.000 € per i lavoratori con figli fiscalmente a carico. Il limite è una soglia, non una
+  franchigia: superarlo rende imponibile l'intero valore. [L. 207/2024, art. 1 c. 390–391](https://www.normattiva.it/eli/stato/LEGGE/2024/12/30/207/CONSOLIDATED)
+- **Buoni pasto.** L'esenzione è per singolo titolo: 4 € se cartaceo, 8 € se elettronico.
+  L'eccedenza concorre al reddito; il valore nominale intero resta spendibile come buono.
+  [TUIR, art. 51 c. 2 lett. c](https://www.normattiva.it/uri-res/N2Ls?urn%3Anir%3Astato%3Alegge%3A1986%3B917~art51=)
+
+La quota imponibile entra anche nella base contributiva: l'art. 6 del D.Lgs. 314/1997
+armonizza il reddito contributivo alle disposizioni fiscali sul lavoro dipendente, salvo le
+eccezioni tassative lì elencate. [D.Lgs. 314/1997, art. 6](https://www.normattiva.it/uri-res/N2Ls?urn%3Anir%3A%3A%3A1997%3B314~art6=)
+
 Per poter calcolare con il solo input RAL, il prototipo deve assumere:
 
 - `RAL = imponibile previdenziale = retribuzione imponibile fiscale prima dei contributi del lavoratore`;

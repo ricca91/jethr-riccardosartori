@@ -13,7 +13,7 @@ Node 18 o successivo. Nessuna dipendenza, nessun `package.json`, niente da insta
 Il motore (`prototipo/motore.js`) è uno script classico: la stessa riga di codice
 gira nella pagina aperta con un doppio clic e in Node, senza duplicati.
 
-Stato al 31 agosto 2026: **173 prove, tutte verdi** (Node v22.22.2).
+Stato al 31 agosto 2026: **185 prove, tutte verdi** (Node v22.22.2).
 
 Gli attrezzi di verifica stanno in `processo/attrezzi/`, e girano anche loro senza
 dipendenze:
@@ -74,6 +74,14 @@ il motore si spezza in voci che si possono esercitare una alla volta.
   trent'anni e lascia formula, importo e soglia identici. Provato: figlio di 35 anni con disabilità
   → 632,13 € a RAL 35.000, esattamente come il figlio di 22; figlio di 10 anni con disabilità →
   0,00 €, perché sotto i 21 non c'è nessun tetto da togliere.
+- **Benefit: denaro e valori spendibili non si confondono.** Senza benefit il golden a RAL
+  35.000 resta **26.032,17 €**. Un welfare esente dichiarato da 1.200 € lascia invariati netto
+  e imponibile e porta il pacchetto a 27.232,17 €. Il fringe è provato a 999,99 € e 1.000,01 €:
+  nel primo caso è tutto esente, nel secondo l'intero valore diventa imponibile; con un figlio
+  fiscalmente a carico la stessa prova gira intorno a 2.000 €. Duecento buoni elettronici da
+  10 € valgono 2.000 €, di cui 1.600 € esenti e 400 € imponibili; dieci buoni da 6 € producono
+  20 € imponibili se cartacei e zero se elettronici. Le quote imponibili spostano anche le RAL
+  dichiarate da `soglie()`, mentre il caso senza benefit conserva le sette soglie storiche.
 - **Le regole locali che guardano i figli, una prova per ente.** Otto giurisdizioni regionali e sei
   comuni, in tre forme distinte. La detrazione per figlio: Trento 246 € (fino a 50.000 € di
   imponibile), Bolzano 340 € a qualunque età (fino a 90.000 €), Sardegna 200 € per figlio

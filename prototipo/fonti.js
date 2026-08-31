@@ -11,6 +11,9 @@ const FONTI=Object.freeze({
   tuir12a:Object.freeze(['TUIR, art. 12 c. 1 lett. a','detrazione per coniuge a carico, con gli scalini della lett. b','https://def.giustiziatributaria.gov.it/DocTribFrontend/getAttoNormativoDetail.do?ACTION=getArticolo&articolo=Articolo+12&id=%7B31D694E8-4398-4030-873B-FEAF5A6647F9%7D']),
   tuir12c:Object.freeze(['TUIR, art. 12 c. 1 lett. c','detrazione per figli a carico dai 21 ai 30 anni','https://def.giustiziatributaria.gov.it/DocTribFrontend/getAttoNormativoDetail.do?ACTION=getArticolo&articolo=Articolo+12&id=%7B31D694E8-4398-4030-873B-FEAF5A6647F9%7D']),
   tuir12d:Object.freeze(['TUIR, art. 12 c. 1 lett. d','detrazione per ascendenti conviventi a carico','https://def.giustiziatributaria.gov.it/DocTribFrontend/getAttoNormativoDetail.do?ACTION=getArticolo&articolo=Articolo+12&id=%7B31D694E8-4398-4030-873B-FEAF5A6647F9%7D']),
+  tuir51welfare:Object.freeze(['TUIR, art. 51 c. 2 lett. f–f-quater','opere, servizi e prestazioni di welfare escluse dal reddito alle condizioni previste','https://www.normattiva.it/uri-res/N2Ls?urn%3Anir%3Astato%3Alegge%3A1986%3B917~art51=']),
+  l207fringe:Object.freeze(['L. 207/2024, art. 1 c. 390–391','fringe benefit 2025–2027: soglia 1.000 €, elevata a 2.000 € con figli a carico','https://www.normattiva.it/eli/stato/LEGGE/2024/12/30/207/CONSOLIDATED']),
+  tuir51buoni:Object.freeze(['TUIR, art. 51 c. 2 lett. c','buoni pasto esenti fino a 4 € cartacei e 8 € elettronici per titolo','https://www.normattiva.it/uri-res/N2Ls?urn%3Anir%3Astato%3Alegge%3A1986%3B917~art51=']),
   lomb:Object.freeze(['Regione Lombardia','addizionale regionale IRPEF progressiva','https://www.regione.lombardia.it/bollo-auto-e-tributi-regionali/red-addizionale-regionale-irpef']),
   mi:Object.freeze(['Comune di Milano','addizionale comunale 0,8%, esenzione fino a 23.000 €','https://www.comune.milano.it/argomenti/tributi/addizionale-comunale-irpef']),
 });
