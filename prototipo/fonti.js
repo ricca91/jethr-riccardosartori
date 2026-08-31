@@ -8,6 +8,9 @@ const FONTI=Object.freeze({
   l207c4:Object.freeze(['L. 207/2024, art. 1 c. 4-5','somma non imponibile fino a 20.000 € di reddito','https://www.normattiva.it/eli/stato/LEGGE/2024/12/30/207/CONSOLIDATED/20251219']),
   l207c6:Object.freeze(['L. 207/2024, art. 1 c. 6','ulteriore detrazione fra 20.000 e 40.000 €','https://www.normattiva.it/eli/stato/LEGGE/2024/12/30/207/CONSOLIDATED/20251219']),
   dl3:Object.freeze(['D.L. 3/2020, art. 1','trattamento integrativo','https://www.normattiva.it/atto/caricaDettaglioAtto?atto.codiceRedazionale=20A02005&atto.dataPubblicazioneGazzetta=2020-04-04&tipoDettaglio=multivigenza']),
+  tuir12a:Object.freeze(['TUIR, art. 12 c. 1 lett. a','detrazione per coniuge a carico, con gli scalini della lett. b','https://def.giustiziatributaria.gov.it/DocTribFrontend/getAttoNormativoDetail.do?ACTION=getArticolo&articolo=Articolo+12&id=%7B31D694E8-4398-4030-873B-FEAF5A6647F9%7D']),
+  tuir12c:Object.freeze(['TUIR, art. 12 c. 1 lett. c','detrazione per figli a carico dai 21 ai 30 anni','https://def.giustiziatributaria.gov.it/DocTribFrontend/getAttoNormativoDetail.do?ACTION=getArticolo&articolo=Articolo+12&id=%7B31D694E8-4398-4030-873B-FEAF5A6647F9%7D']),
+  tuir12d:Object.freeze(['TUIR, art. 12 c. 1 lett. d','detrazione per ascendenti conviventi a carico','https://def.giustiziatributaria.gov.it/DocTribFrontend/getAttoNormativoDetail.do?ACTION=getArticolo&articolo=Articolo+12&id=%7B31D694E8-4398-4030-873B-FEAF5A6647F9%7D']),
   lomb:Object.freeze(['Regione Lombardia','addizionale regionale IRPEF progressiva','https://www.regione.lombardia.it/bollo-auto-e-tributi-regionali/red-addizionale-regionale-irpef']),
   mi:Object.freeze(['Comune di Milano','addizionale comunale 0,8%, esenzione fino a 23.000 €','https://www.comune.milano.it/argomenti/tributi/addizionale-comunale-irpef']),
 });

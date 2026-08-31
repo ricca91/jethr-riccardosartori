@@ -57,6 +57,21 @@ il motore si spezza in voci che si possono esercitare una alla volta.
 - **RAL 25.327,61 → 25.327,62.** L'esenzione dell'addizionale comunale di Milano è
   un'esenzione, non una franchigia: un centesimo lordo in più costa 183,99 € netti l'anno.
   È legge, non un errore di arrotondamento.
+- **Le detrazioni per carichi di famiglia (art. 12).** Derivate a mano dal testo dell'articolo,
+  una prova per ciascuna delle sue regole: la quota del coniuge nelle tre fasce e i cinque
+  scalini della lett. b — l'unico punto della norma in cui una detrazione **risale** —, i figli
+  fra 21 e 30 anni con la soglia di 95.000 € **cresciuta di 15.000 € per ogni figlio successivo
+  al primo che dà diritto** (il quindicenne non porta detrazione e non alza la soglia dei
+  fratelli), gli ascendenti conviventi sulla soglia di 80.000 €, e i limiti di reddito del
+  familiare del comma 2 — 2.840,51 €, elevati a 4.000 € per i figli fino a 24 anni.
+  A RAL 35.000 con coniuge, un figlio di 22 anni, uno di 17 e un ascendente: **710,00 ·
+  632,13 · 0,00 · 452,03**, netto **27.826,33**.
+- **Il comma 4, che è la parte che si sbaglia.** I rapporti dell'art. 12 vanno assunti nelle
+  prime quattro cifre decimali, e la detrazione **non compete** quando il rapporto è zero,
+  negativo o uguale a uno. Le due cose sono distinte e vanno in quest'ordine: si guarda il
+  rapporto vero per decidere se spetta, lo si tronca per calcolarla. Invertirle azzererebbe
+  detrazioni che spettano. A reddito complessivo zero il rapporto dei figli vale uno, e la
+  detrazione non c'è.
 - **RAL 122.295 e oltre.** I contributi si fermano a 11.899,62 € e non si muovono più:
   l'aliquota effettiva scende dal 9,73% al 5,95% a 200.000 € e all'1,19% a un milione.
 - **RAL 0 → netto 0.** Capienza: le detrazioni abbattono l'imposta ma non sono
@@ -78,6 +93,14 @@ L'invariante di monotonicità è formulato in modo da non bocciare il motore giu
 legge. Un test così boccerebbe l'implementazione corretta, e la reazione naturale sarebbe
 "aggiustare" un motore che funziona.
 
+**Le soglie dipendono anche dal nucleo, non solo dal comune.** Le detrazioni per carichi di
+famiglia possono azzerare l'IRPEF netta, e senza IRPEF netta non c'è addizionale: il salto
+dell'esenzione comunale di Milano, che a RAL 25.327,62 vale 184 € per un contribuente
+solo, **non esiste** per chi dichiara coniuge, un figlio di 22 anni e un ascendente — da
+entrambi i lati della soglia l'imposta è già zero. Per questo `soglie()` prende il nucleo
+insieme al comune, la cache è chiavata su entrambi, e la FAQ distingue «questo comune non
+ha esenzione» da «l'esenzione c'è ma non ti riguarda». Una prova copre esattamente questo.
+
 ### D — ogni voce esercitata da sola
 
 Fino al [#15](https://github.com/ricca91/jethr-riccardosartori/issues/15) il motore era
@@ -88,9 +111,9 @@ lo produce — e quando una prova diventava rossa diceva *che* qualcosa si era r
 
 Adesso ogni voce ha la sua funzione e la sua prova: `contributiIvs`,
 `contributoAggiuntivo`, `imponibile`, `irpefLorda`, `detrazioneLavoroDipendente`,
-`ulterioreDetrazione`, `applicaCapienza`, `addizionaleRegionale`,
-`addizionaleComunale`, `sommaNonImponibile`, `trattamentoIntegrativo`, `riconcilia`.
-Entrano numeri, escono numeri.
+`ulterioreDetrazione`, `detrazioniCarichiFamiglia`, `applicaCapienza`,
+`addizionaleRegionale`, `addizionaleComunale`, `sommaNonImponibile`,
+`trattamentoIntegrativo`, `riconcilia`. Entrano numeri, escono numeri.
 
 ### La proprietà è verificata, non asserita
 
@@ -242,6 +265,19 @@ su ciò che già sappiamo e nessuna su ciò che conta.
 - **Il 9,19% è una scelta di modello**, non un'aliquota universale: inquadramento INPS,
   settore, dimensione del datore e fondi speciali possono cambiarla.
 - **Un solo profilo personale.** Impiegato del settore privato, anno intero, tempo pieno,
-  nessun familiare a carico, nessun altro reddito, nessun onere deducibile o detraibile.
-  Regione e comune variano con la selezione; agevolazioni personali o categoriali restano
-  escluse anche quando compaiono nella fonte locale.
+  nessun altro reddito, nessun onere deducibile o detraibile. Regione, comune e familiari a
+  carico variano con la selezione; agevolazioni personali o categoriali restano escluse anche
+  quando compaiono nella fonte locale.
+- **La ripartizione pro quota della capienza è una convenzione, non una regola.** L'art. 12
+  somma le detrazioni di famiglia e le sottrae dall'imposta: non ne alloca nessuna a nessuno.
+  Quando la capienza non basta, mostrare una riga per familiare obbliga a decidere quanto ne
+  usa ciascuno, e la scelta è ripartire in proporzione a quanto spetta. Consumarle in fila
+  direbbe che il primo dichiarato ha avuto tutto e l'ultimo niente, che non è vero di nessuno.
+  Quello che è provato è che la somma di quanto si usa è **esattamente** la capienza residua.
+- **Le detrazioni di famiglia sono calcolate per l'anno intero.** L'art. 12 c. 3 le rapporta a
+  mese, dal mese in cui le condizioni si verificano a quello in cui cessano: qui si assume che
+  valgano per tutti i dodici. La quota degli ascendenti è assunta intera, non ripartita fra più
+  aventi diritto, e il reddito complessivo del dichiarante è approssimato con l'imponibile IRPEF.
+- **Fuori perimetro, dichiarato a schermo.** Le maggiorazioni per figli con disabilità
+  (art. 12 c. 1 lett. c) e il caso dei familiari residenti all'estero di contribuente extra-UE
+  (art. 12 c. 2-bis) non sono calcolati: servono fatti che la sola RAL non porta.
