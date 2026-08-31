@@ -117,6 +117,53 @@ figli cresce solo per i figli **che danno diritto** alla detrazione, e i rapport
 vanno **troncati a quattro decimali** come quelli dell'art. 13 (c. 4). Entrambi erano sbagliati
 nelle formule scritte a memoria, ed entrambi ora hanno una prova.
 
+## Le regole locali per la famiglia: tre meccanismi, non uno (#34)
+
+Contare gli enti che nell'addizionale guardano i figli a carico è stato il lavoro, non
+implementarli. Il conto è venuto leggendo i CSV MEF riga per riga, e due volte è risultato
+diverso da quello scritto nel ticket.
+
+**Le regioni sono otto, non sette.** All'elenco del ticket manca il **Veneto**, che applica
+un'aliquota agevolata dello 0,9% a chi ha un familiare disabile fiscalmente a carico: stesso
+meccanismo delle Marche, stessa soglia di 50.000 €.
+
+**I comuni sono sei, non due.** Il ticket contava le righe del CSV 2026, ma il dataset usa anche
+le righe 2025 prorogate per i 4.830 comuni senza delibera 2026 — e lì compaiono **Bovolone,
+Negrar di Valpolicella, Roverè Veronese e Zevio**, con la stessa esenzione per numero di figli di
+Bardolino e Bosco Chiesanuova. Contare la fonte invece del dato generato è il modo in cui si
+perdono quattro comuni.
+
+**Tre meccanismi restano tre.** Sei enti aggiungono una **detrazione** per figlio: sta nell'array
+`detrazioni`, che sapeva già sommare importi, con una forma nuova (`perFiglio`) che porta i suoi
+criteri come dati — importo, minimo di figli, età massima, limite di reddito del figlio,
+supplemento per disabilità. Marche e Veneto cambiano l'**aliquota**: non è una detrazione e non
+poteva starci dentro, perché sostituisce il calcolo dell'imposta invece di correggerlo. I sei
+comuni cambiano l'**esenzione**: non è un importo ma una soglia che sale di 10.000 € per ogni
+figlio oltre il minimo. Modellarli tutti e tre come «una detrazione» avrebbe dato numeri
+plausibili e sbagliati.
+
+**Il filtro sta dentro le funzioni, mai sull'input.** Il nucleo arriva intero, minorenni compresi.
+L'art. 12 non dà niente ai figli sotto i 21 anni, ma la Sardegna vuole proprio i minorenni e i
+comuni veronesi contano i figli senza limite d'età: filtrare all'ingresso renderebbe il dato
+locale non più ricostruibile.
+
+**Due comuni restano scoperti, e lo dicono.** Grottammare e San Benedetto del Tronto condizionano
+l'esenzione all'**ISEE**, che dalla RAL non si ricava. Non c'è niente da normalizzare: la
+condizione è scritta nel dataset, in `condizioniPersonali`, invece di sparire.
+
+## La disabilità toglie un'età, non aggiunge un importo (#34)
+
+Il ticket lasciava aperto «l'importo per i figli con disabilità», citando 1.350 € da fonti
+secondarie. Sul testo vigente dell'art. 12 quell'importo **non esiste**, e non esiste più nemmeno
+la maggiorazione di 400 € per handicap: la lett. c) dà 950 € «per ciascun figlio di età compresa
+fra 21 e 30 anni, **ovvero** per ciascun figlio di età pari o superiore a 30 anni con disabilità
+accertata». La disabilità entra solo nel predicato di ammissibilità — stessa formula, stesso
+importo, stessa soglia — e infatti non ha portato con sé nessuna costante in `K`.
+
+La conseguenza pratica è che il flag serviva comunque: cinque delle otto regioni e una delle due
+aliquote agevolate lo guardano. Senza, metà del lavoro sulle regole locali sarebbe stato
+irraggiungibile dalla pagina.
+
 ## Se un link di un ticket non porta da nessuna parte
 
 I ticket sono stati scritti mentre il lavoro procedeva, quindi citano la repo **com'era in quel

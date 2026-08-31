@@ -65,6 +65,7 @@ body{padding-bottom:0}
 .nucleo-in{padding-block:8px;font-size:var(--t-sm)}
 .nucleo-eta{width:86px}
 .nucleo-red{width:118px}
+.nucleo-dis{width:78px;text-align:center}
 .nucleo-imp{white-space:nowrap;font-weight:600}
 .nucleo-perche{font-size:var(--t-xs);color:var(--fg-muted);max-width:36ch}
 .nucleo-x{border:0;background:none;cursor:pointer;font:400 var(--t-sm)/1 var(--font-mono);
@@ -92,6 +93,7 @@ body{padding-bottom:0}
   .nucleo-tab td:last-child::before{content:none}
   .nucleo-perche{max-width:none}
   .nucleo-eta,.nucleo-red{width:130px}
+  .nucleo-dis{width:auto;text-align:left}
   .nucleo-tab .select{width:auto;min-width:190px}
 }
 
@@ -283,7 +285,8 @@ const LIMITI=[
   ['«RAL» non è una base legale autonoma','È una convenzione retributiva. Il calcolo assume RAL = imponibile previdenziale = imponibile fiscale prima dei contributi, senza componenti variabili, benefit o rimborsi.'],
   ['Competenza, non cassa','È il carico maturato sulla RAL 2026, non il denaro trattenuto nei cedolini del 2026: le addizionali si pagano a rate dopo il conguaglio. Per questo la cifra mensile è una media, non l\'importo di una busta paga.'],
   ['Sopra 122.295 € si assume la prima iscrizione dal 1996','Il massimale contributivo vale solo per chi è privo di anzianità al 31/12/1995. È l\'unico punto in cui la sola RAL non basta più.'],
-  ['Le detrazioni di famiglia valgono per l\'anno intero','L\'art. 12 c. 3 le rapporta a mese: qui si assume che le condizioni valgano per tutti i dodici. La quota degli ascendenti è assunta intera e non ripartita con altri aventi diritto, e il reddito complessivo del dichiarante è approssimato con l\'imponibile IRPEF. Restano fuori le maggiorazioni per figli con disabilità (art. 12 c. 1 lett. c) e il caso dei familiari residenti all\'estero di contribuente extra-UE (art. 12 c. 2-bis).'],
+  ['Le detrazioni di famiglia valgono per l\'anno intero','L\'art. 12 c. 3 le rapporta a mese: qui si assume che le condizioni valgano per tutti i dodici, e che la detrazione spetti per intero al dichiarante — la lett. c) la ripartisce al 50% fra i genitori, salvo accordo diverso. La quota degli ascendenti è assunta intera e non ripartita con altri aventi diritto, e il reddito complessivo del dichiarante è approssimato con l\'imponibile IRPEF. Resta fuori il caso dei familiari residenti all\'estero di contribuente extra-UE (art. 12 c. 2-bis).'],
+  ['Le regole locali per la famiglia valgono sul solo reddito del dichiarante','Otto giurisdizioni regionali e sei comuni cambiano l\'addizionale in base ai figli a carico. Marche e Veneto chiedono che la somma dei redditi dei genitori non superi 50.000 €, i comuni veronesi ragionano sul reddito imponibile della famiglia: qui si guarda solo il tuo. Restano fuori le esenzioni comunali legate all\'ISEE (Grottammare, San Benedetto del Tronto e una delle due di Bosco Chiesanuova) e l\'aliquota veneta ridotta per il contribuente disabile in prima persona, che non è un dato del nucleo.'],
 ];
 const FAQ=[
   ['Perché il netto mensile non coincide con la mia busta paga?','Il calcolo è annuale e di competenza. Le addizionali vengono trattenute a rate nell\'anno successivo al conguaglio, la tredicesima non beneficia delle stesse detrazioni mensili e il conguaglio di fine anno riequilibra tutto. Per questo il numero è etichettato <b>media</b>, mai «importo del cedolino».'],
@@ -308,6 +311,7 @@ const FAQ=[
   }],
   ['Quali sono i contributi a carico del dipendente?','Il contributo IVS del 9,19% sull\'imponibile previdenziale, più un contributo aggiuntivo dell\'1% sulla quota che supera la prima fascia pensionabile (56.224 € nel 2026). Sopra il massimale di 122.295 € entrambi si fermano: è il motivo per cui l\'aliquota contributiva effettiva scende oltre quella soglia.'],
   ['Ho un figlio di 15 anni: perché non compare nessuna detrazione?','Perché dal 2022, sotto i <b>21 anni</b>, la detrazione per figli a carico non esiste più: è assorbita dall\'<b>Assegno Unico e Universale</b>, che si chiede all\'INPS e non passa dalla busta paga. La detrazione dell\'art. 12 TUIR riprende dai 21 anni compiuti e si ferma ai 30. Non è un buco del calcolatore: è dove la norma ha spostato il sostegno.'],
+  ['Le regioni e i comuni contano i figli?','Sì, e non tutti allo stesso modo. <b>Trento, Bolzano, Sardegna, Campania, Piemonte e Puglia</b> aggiungono una detrazione dall\'addizionale regionale per ogni figlio a carico, con importi, tetti di reddito e numeri minimi di figli diversi fra loro. <b>Marche e Veneto</b> non detraggono: applicano un\'<b>aliquota più bassa</b> se in famiglia c\'è una persona con disabilità accertata. Sei comuni del Veronese — <b>Bardolino, Bosco Chiesanuova, Bovolone, Negrar di Valpolicella, Roverè Veronese e Zevio</b> — non applicano l\'addizionale comunale alle famiglie numerose, con una soglia di esenzione che sale di 10.000 € per ogni figlio oltre il minimo. Tutte queste regole entrano nel calcolo solo se dichiari i familiari qui sopra.'],
   ['Quando un familiare è «a carico»?','Quando il suo reddito complessivo non supera <b>2.840,51 €</b> l\'anno, elevati a <b>4.000 €</b> per i figli fino a 24 anni. Sopra quella soglia il familiare non è a carico e la detrazione non spetta, anche se convive. Gli «altri familiari» dell\'art. 12 sono oggi i soli <b>ascendenti conviventi</b>: genitori e nonni che vivono con te.'],
   ['Cosa non è incluso nel calcolo?','TFR, costo azienda e contributi del datore, INAIL, CCNL e fondi di solidarietà, fondi sanitari e previdenza complementare, altri redditi, oneri deducibili e detraibili, benefit, premi e agevolazioni personali. I familiari a carico si dichiarano nel modulo qui sopra; tutto il resto non è ricavabile dalla sola RAL, e chiederlo significherebbe un modulo lungo prima del primo risultato.'],
   ['Da dove vengono le regole?','Solo da fonti primarie: Istat per i comuni attivi, MEF per le addizionali locali, leggi di bilancio, TUIR e circolari INPS. Ogni voce del dettaglio rimanda al riferimento ufficiale applicato.'],
@@ -356,16 +360,20 @@ const TIPO_LETTERA={coniuge:'c',figlio:'f',ascendente:'a'};
 const LETTERA_TIPO={c:'coniuge',f:'figlio',a:'ascendente'};
 const NOME_FAMILIARE={coniuge:'Coniuge',figlio:'Figlio',ascendente:'Ascendente convivente'};
 const MAX_FAMILIARI=12;
+/* `d` è la disabilità accertata: entra nell'URL come tutto il resto,
+   perché un link deve poter ricostruire lo stesso identico calcolo. */
 const serializzaNucleo=nucleo=>nucleo.map(f=>TIPO_LETTERA[f.tipo]+
-  (f.eta===null||f.eta===undefined?'':f.eta)+(f.reddito>0?'r'+f.reddito:'')).join('.');
+  (f.eta===null||f.eta===undefined?'':f.eta)+(f.disabilita?'d':'')+
+  (f.reddito>0?'r'+f.reddito:'')).join('.');
 function deserializzaNucleo(testo){
   let coniugi=0;
   return String(testo||'').split('.').map(t=>{
-    const m=/^([cfa])(\d{1,3})?(?:r(\d{1,7}))?$/.exec(t);
+    const m=/^([cfa])(\d{1,3})?(d)?(?:r(\d{1,7}))?$/.exec(t);
     if(!m)return null;
     const tipo=LETTERA_TIPO[m[1]];
     if(tipo==='coniuge'&&++coniugi>1)return null;   // l'art. 12 ne conosce uno solo
-    return{tipo,eta:m[2]===undefined?null:Number(m[2]),reddito:m[3]?Number(m[3]):0};
+    return{tipo,eta:m[2]===undefined?null:Number(m[2]),
+      disabilita:m[3]!==undefined,reddito:m[4]?Number(m[4]):0};
   }).filter(Boolean).slice(0,MAX_FAMILIARI);
 }
 
@@ -374,17 +382,21 @@ const NUCLEO_LIMITI=`<b>Quando un familiare è «a carico».</b>
   per i figli fino a 24 anni il limite è <b>4.000 €</b>.
   <b>Sotto i 21 anni</b> la detrazione per figli non esiste: dal 2022 è assorbita
   dall’<b>Assegno Unico</b>, che si chiede all’INPS e non passa dalla busta paga.
-  Riprende dai 21 anni compiuti e si ferma ai 30. Gli <b>altri familiari</b> dell’art. 12
+  Riprende dai 21 anni compiuti e si ferma ai 30 — oltre i 30 spetta solo al figlio con
+  <b>disabilità accertata</b> ai sensi dell’art. 3 della L. 104/1992, con lo stesso importo:
+  la disabilità toglie il tetto d’età, non aumenta la detrazione. Gli <b>altri familiari</b> dell’art. 12
   sono oggi i soli <b>ascendenti conviventi</b> — genitori e nonni che vivono con te.
   Come le altre, queste detrazioni <b>abbattono l’IRPEF e non vengono rimborsate</b>:
   se l’imposta finisce, la parte eccedente si perde.`;
-const NUCLEO_PERIMETRO=`<b>Fuori perimetro, dichiarato.</b> Non sono calcolate le
-  <b>maggiorazioni per figli con disabilità</b> (art. 12 c. 1 lett. c) né il caso dei
+const NUCLEO_PERIMETRO=`<b>Fuori perimetro, dichiarato.</b> Non è calcolato il caso dei
   <b>familiari residenti all’estero di contribuente extra-UE</b> (art. 12 c. 2-bis):
   servono documenti che la sola RAL non porta. Il <b>reddito complessivo</b> del
   dichiarante è approssimato con l’imponibile IRPEF, le detrazioni sono calcolate per
-  l’<b>anno intero</b> (l’art. 12 c. 3 le rapporta a mese) e la quota degli ascendenti
-  è assunta <b>intera</b>, non ripartita con altri aventi diritto.`;
+  l’<b>anno intero</b> (l’art. 12 c. 3 le rapporta a mese) e assunte <b>intere</b> per il
+  dichiarante: la lett. c) le ripartisce al <b>50% fra i genitori</b> salvo accordo diverso,
+  e la quota degli ascendenti non è divisa con altri aventi diritto.
+  Le <b>regole locali</b> che guardano i figli guardano qui il solo reddito del dichiarante,
+  non quello della famiglia, e restano fuori le esenzioni comunali legate all’<b>ISEE</b>.`;
 
 function nucleoBlocco(stato){
   /* I numeri si mostrano solo se il risultato a schermo è stato
@@ -415,6 +427,9 @@ function nucleoBlocco(stato){
       <td data-etichetta="Suo reddito"><input class="input nucleo-in nucleo-red" id="nucleo-reddito-${i}" data-nucleo-reddito="${i}"
           type="text" inputmode="numeric" maxlength="7" autocomplete="off" placeholder="0"
           aria-label="Reddito del familiare, riga ${i+1}" value="${f.reddito>0?f.reddito:''}"></td>
+      <td class="nucleo-dis" data-etichetta="Disabilità"><input type="checkbox"
+          id="nucleo-disabilita-${i}" data-nucleo-disabilita="${i}" ${f.disabilita?'checked':''}
+          aria-label="Disabilità accertata (L. 104/1992) del familiare, riga ${i+1}"></td>
       <td class="num nucleo-imp" data-etichetta="Detrazione">${importo}</td>
       <td class="nucleo-perche" data-etichetta="Perché">${perche}</td>
       <td><button class="nucleo-x" data-nucleo-rimuovi="${i}"
@@ -428,7 +443,7 @@ function nucleoBlocco(stato){
     </div>
     ${stato.nucleo.length?`<div class="table-wrap"><table class="table nucleo-tab">
       <caption class="sr">Familiari a carico dichiarati</caption>
-      <thead><tr><th>Familiare</th><th>Età</th><th>Suo reddito</th>
+      <thead><tr><th>Familiare</th><th>Età</th><th>Suo reddito</th><th>Disabilità</th>
         <th class="num">Detrazione</th><th>Perché</th><th><span class="sr">Azioni</span></th></tr></thead>
       <tbody>${stato.nucleo.map(riga).join('')}</tbody></table></div>`
       :`<p class="nucleo-vuoto">Nessun familiare dichiarato: il risultato è quello di un
@@ -927,6 +942,12 @@ document.addEventListener('input',e=>{
   }
 });
 document.addEventListener('change',e=>{
+  const disabilita=e.target.dataset&&e.target.dataset.nucleoDisabilita;
+  if(disabilita!==undefined&&disabilita!==null){
+    st.nucleo[Number(disabilita)].disabilita=e.target.checked;
+    if(st.res)st.dirty=true;
+    return render(true);
+  }
   const indice=e.target.dataset&&e.target.dataset.nucleoTipo;
   if(indice!==undefined&&indice!==null){
     const familiare=st.nucleo[Number(indice)];
@@ -960,7 +981,7 @@ document.addEventListener('click',e=>{
   if(familiare){
     if(familiare.id==='nucleo-aggiungi'){
       if(st.nucleo.length>=MAX_FAMILIARI)return;
-      st.nucleo.push({tipo:'figlio',eta:null,reddito:0});
+      st.nucleo.push({tipo:'figlio',eta:null,disabilita:false,reddito:0});
     }else st.nucleo.splice(Number(familiare.dataset.nucleoRimuovi),1);
     if(st.res)st.dirty=true;
     return render(true);

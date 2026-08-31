@@ -68,6 +68,10 @@ const NOTA_SENZA_DIRITTO={
   rapportoFuoriIntervallo:()=>'reddito fuori dall’intervallo dell’art. 12',
 };
 const TRONCATO='  (rapporto troncato a 4 decimali)';
+/* L'età da cui la lett. c) chiede la disabilità per continuare a dare
+   la detrazione. Sta qui e non nel motore perché serve a scegliere una
+   frase, non a calcolare un importo. */
+const SOGLIA_DISABILITA=30;
 const perScelta=(n,uno,molti)=>`${n} ${n===1?uno:molti}`;
 const formulaConiuge=v=>{
   const t=v.termini;
@@ -118,11 +122,12 @@ const RICETTE={
     formula:v=>descriviRegola(v,true)},
   somma:{campi:['base','aliquota'],titolo:()=>`Somma non imponibile (cuneo)`,
     formula:v=>`${formatta(v.base)} × ${percentuale(v.aliquota,1)}`},
-  detrfam:{campi:['tipoFamiliare','eta','esito','fascia','redditoFamiliare',
+  detrfam:{campi:['tipoFamiliare','eta','disabilita','esito','fascia','redditoFamiliare',
       'limiteRedditoFamiliare','spettante','capiente','rapporto','termini'],
     titolo:v=>`Detrazione per ${v.tipoFamiliare==='figlio'
-      ?`figlio a carico (${v.eta===null?'età non indicata':perScelta(v.eta,'anno','anni')})`
-      :FAMILIARE[v.tipoFamiliare]}`,
+      ?`figlio a carico (${v.eta===null?'età non indicata':perScelta(v.eta,'anno','anni')}`+
+       `${v.disabilita?', disabilità accertata':''})`
+      :FAMILIARE[v.tipoFamiliare]+(v.disabilita?' (disabilità accertata)':'')}`,
     formula:(v,voci)=>{
       if(v.esito!=='spetta')return`0 — ${SENZA_DIRITTO[v.esito](v)}`;
       const t=v.termini;
@@ -140,7 +145,13 @@ const RICETTE={
     nota:v=>{
       if(v.esito!=='spetta')return NOTA_SENZA_DIRITTO[v.esito](v);
       const entro=`a carico entro ${senzaCentesimi(v.limiteRedditoFamiliare)} €`;
-      if(v.tipoFamiliare==='figlio')return`21–29 anni, ${entro}`;
+      /* La lett. c) apre due porte, non una: 21–29 anni per tutti, e
+         dai 30 in su per il figlio con disabilità accertata. Dire
+         «21–29 anni» accanto a un figlio di 35 sarebbe una bugia. */
+      if(v.tipoFamiliare==='figlio')
+        return v.disabilita&&v.eta!==null&&v.eta>=SOGLIA_DISABILITA
+          ?`30 anni e oltre, disabilità accertata, ${entro}`
+          :`21–29 anni, ${entro}`;
       if(v.tipoFamiliare==='ascendente')return`convivente, ${entro}`;
       return entro;
     }},

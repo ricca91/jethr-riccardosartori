@@ -13,7 +13,7 @@ Node 18 o successivo. Nessuna dipendenza, nessun `package.json`, niente da insta
 Il motore (`prototipo/motore.js`) è uno script classico: la stessa riga di codice
 gira nella pagina aperta con un doppio clic e in Node, senza duplicati.
 
-Stato al 25 agosto 2026: **61 prove, tutte verdi** (Node v22.22.2).
+Stato al 31 agosto 2026: **173 prove, tutte verdi** (Node v22.22.2).
 
 Gli attrezzi di verifica stanno in `processo/attrezzi/`, e girano anche loro senza
 dipendenze:
@@ -66,6 +66,29 @@ il motore si spezza in voci che si possono esercitare una alla volta.
   familiare del comma 2 — 2.840,51 €, elevati a 4.000 € per i figli fino a 24 anni.
   A RAL 35.000 con coniuge, un figlio di 22 anni, uno di 17 e un ascendente: **710,00 ·
   632,13 · 0,00 · 452,03**, netto **27.826,33**.
+- **La disabilità del figlio non è un importo, è un'età che cade.** La lett. c) dà 950 € «per
+  ciascun figlio di età compresa fra 21 e 30 anni, **ovvero** per ciascun figlio di età pari o
+  superiore a 30 anni con disabilità accertata ai sensi dell'art. 3 della L. 104/1992». Le fonti
+  secondarie citano un importo di 1.350 € per i figli disabili e una maggiorazione di 400 € per
+  handicap: sul testo vigente **non esiste né l'uno né l'altra**. La disabilità toglie il tetto dei
+  trent'anni e lascia formula, importo e soglia identici. Provato: figlio di 35 anni con disabilità
+  → 632,13 € a RAL 35.000, esattamente come il figlio di 22; figlio di 10 anni con disabilità →
+  0,00 €, perché sotto i 21 non c'è nessun tetto da togliere.
+- **Le regole locali che guardano i figli, una prova per ente.** Otto giurisdizioni regionali e sei
+  comuni, in tre forme distinte. La detrazione per figlio: Trento 246 € (fino a 50.000 € di
+  imponibile), Bolzano 340 € a qualunque età (fino a 90.000 €), Sardegna 200 € per figlio
+  **minorenne** con reddito fino a 4.000 € più 100 € se disabile, Campania 30 € **da due figli in
+  su** più 40 € per figlio disabile (fino a 28.000 €), Piemonte 100 € **da tre figli in su** più
+  500 € per figlio disabile, Puglia 20 € **da quattro figli in su** più 375 € per figlio disabile.
+  L'aliquota diversa: Marche 1,23% e Veneto 0,9% sull'intero imponibile fino a 50.000 €, che
+  **sostituiscono** il calcolo ordinario invece di correggerlo. L'esenzione che sale: Bardolino,
+  Bosco Chiesanuova, Bovolone, Negrar di Valpolicella, Roverè Veronese e Zevio, dove la soglia di
+  esenzione comunale cresce di 10.000 € per ogni figlio a carico oltre il minimo.
+- **Un familiare in più non fa mai scendere il netto.** Proprietà verificata su 601 RAL campionate
+  (da 0 a 150.000 €, passo 250 €) per quattro coppie di nuclei: a Milano, dove le regole locali non
+  guardano la famiglia; a Torino, dove il terzo figlio apre di colpo la detrazione regionale per
+  tutti e tre; a Bardolino, dove il figlio in più alza la soglia dell'esenzione comunale. Zero
+  cadute. È la prova che nessuna soglia sul *numero* dei figli è scritta al contrario.
 - **Il comma 4, che è la parte che si sbaglia.** I rapporti dell'art. 12 vanno assunti nelle
   prime quattro cifre decimali, e la detrazione **non compete** quando il rapporto è zero,
   negativo o uguale a uno. Le due cose sono distinte e vanno in quest'ordine: si guarda il
@@ -278,6 +301,19 @@ su ciò che già sappiamo e nessuna su ciò che conta.
   mese, dal mese in cui le condizioni si verificano a quello in cui cessano: qui si assume che
   valgano per tutti i dodici. La quota degli ascendenti è assunta intera, non ripartita fra più
   aventi diritto, e il reddito complessivo del dichiarante è approssimato con l'imponibile IRPEF.
-- **Fuori perimetro, dichiarato a schermo.** Le maggiorazioni per figli con disabilità
-  (art. 12 c. 1 lett. c) e il caso dei familiari residenti all'estero di contribuente extra-UE
-  (art. 12 c. 2-bis) non sono calcolati: servono fatti che la sola RAL non porta.
+- **La detrazione è assegnata per intero al dichiarante.** La lett. c) la ripartisce **al 50% fra i
+  genitori** salvo accordo diverso, e la lett. d) la divide pro quota fra gli aventi diritto. È
+  l'unica assunzione del perimetro che **gonfia** il risultato invece di essere conservativa: una
+  coppia con due redditi vedrà metà della detrazione per figli che questa pagina mostra. Per questo
+  è dichiarata a schermo, e non solo qui.
+- **Le regole locali per la famiglia guardano il solo reddito del dichiarante.** Marche e Veneto
+  chiedono che la somma dei redditi dei genitori non superi 50.000 €; i comuni veronesi ragionano
+  sul reddito imponibile della famiglia. Il prodotto non conosce il reddito dell'altro genitore e
+  non ha intenzione di chiederlo.
+- **Fuori perimetro, dichiarato a schermo.** Il caso dei familiari residenti all'estero di
+  contribuente extra-UE (art. 12 c. 2-bis) non è calcolato: servono fatti che la sola RAL non porta.
+  Restano fuori anche le esenzioni comunali legate all'**ISEE** — Grottammare e San Benedetto del
+  Tronto per i nuclei con almeno quattro figli minori, e la seconda esenzione di Bosco Chiesanuova
+  per invalidità — e l'aliquota veneta ridotta per il contribuente disabile **in prima persona**,
+  che non è un dato del nucleo familiare. Le tre condizioni sono scritte nel dataset, in
+  `condizioniPersonali`, non lasciate al silenzio.

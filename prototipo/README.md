@@ -56,7 +56,8 @@ caricano da `file://`, gli script classici sì.
 Lo stato sta nell'URL (`?ral=&m=&c=&n=&calc=1`), incluso il codice catastale del comune e
 il nucleo familiare, quindi ogni schermata è condivisibile. Il parametro `n` porta un
 familiare per token — `c` coniuge, `f22` figlio di 22 anni, `a` ascendente convivente,
-`f22r1500` con il suo reddito — e **non compare** se non c'è nessun familiare dichiarato:
+`f35d` con disabilità accertata, `f22r1500` con il suo reddito — e **non compare** se non
+c'è nessun familiare dichiarato:
 senza nucleo la query string è quella di prima.
 
 ## Come si provano i numeri
@@ -123,7 +124,7 @@ afferma.
 ## Il nucleo familiare
 
 `calcola(ral, { comune, nucleo })` accetta un nucleo come lista di familiari —
-`{ tipo: 'coniuge' | 'figlio' | 'ascendente', eta, reddito }` — e ne emette **una Voce per
+`{ tipo: 'coniuge' | 'figlio' | 'ascendente', eta, disabilita, reddito }` — e ne emette **una Voce per
 persona** (`detrfam1`, `detrfam2`, …), non una voce sola né una per tipo. È la scelta uscita
 dal prototipo del [#35](https://github.com/ricca91/jethr-riccardosartori/issues/35): la
 pagina deve poter dire *perché* una detrazione è zero, e per dirlo serve una riga per la
@@ -134,6 +135,19 @@ Il motore emette un **codice** di esito — `spetta`, `assorbitaAssegnoUnico`,
 la frase in italiano nasce in `righe.js`, che è dove vivono le parole. Ogni Riga porta anche
 una `nota`: la stessa cosa della formula, in poche parole, per la colonna «perché» della
 tabella del nucleo.
+
+La **disabilità accertata** (art. 3 L. 104/1992) non è un importo: toglie il tetto dei
+trent'anni della lett. c) e lascia formula, importo e soglia identici. Le fonti secondarie
+citano 1.350 € per i figli disabili e una maggiorazione di 400 €: sul testo vigente non
+esiste né l'uno né l'altra, e infatti il flag non porta nessuna costante in `K`. Serve però
+anche alle regole locali — cinque regioni su otto lo guardano.
+
+Otto giurisdizioni regionali e sei comuni cambiano l'**addizionale** in base ai figli a
+carico, in tre forme distinte: una detrazione per figlio (Trento, Bolzano, Sardegna,
+Campania, Piemonte, Puglia), un'aliquota diversa (Marche, Veneto) e — nei sei comuni
+veronesi — una soglia di esenzione che sale di 10.000 € per ogni figlio oltre il minimo.
+Per questo `calcolaAddizionale`, `addizionaleRegionale`, `addizionaleComunale` e
+`detrazioneLocale` ricevono la famiglia come parametro opzionale in coda.
 
 Due punti dell'art. 12 sono facili da sbagliare e sono provati apposta: la soglia dei figli
 cresce di 15.000 € solo per i figli **che danno diritto** alla detrazione (un quindicenne non

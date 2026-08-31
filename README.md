@@ -62,9 +62,9 @@ richieste. Sono usciti sette filoni e sedici ticket, implementabili uno alla vol
 | Cosa mancava | Quante volte | Stato |
 |---|---|---|
 | Mensilità oltre la tredicesima | 9 | fatto |
-| Regione e comune scelti da chi calcola | 7 | aperto |
+| Regione e comune scelti da chi calcola | 7 | fatto |
 | Scelta del CCNL | 5 | aperto |
-| Nucleo familiare e figli a carico | 5 | aperto |
+| Nucleo familiare e figli a carico | 5 | fatto |
 | Premi di risultato e MBO | 3 | aperto |
 | Welfare e fringe benefit | 2 | aperto |
 | Costo totale per l'azienda | 1 | aperto |
@@ -99,10 +99,11 @@ Quando l'ho pubblicato era un artefatto. Serviva a rispondere a un task, copriva
 e finito quello avrebbe smesso di servire a qualcosa. Sedici ticket dopo è diventato un'altra
 cosa: non ancora finita, ma con una direzione.
 
-La direzione è portarlo dal caso singolo che copre oggi — dipendente privato, Milano, anno
-intero — verso i casi veri. Regione e comune scelti da chi calcola. Il CCNL. Il nucleo
-familiare. Il costo per l'azienda accanto al netto del lavoratore. Sono problemi grossi, alcuni
-più grossi del calcolatore stesso, e li sto affrontando uno alla volta.
+La direzione è portarlo dal caso singolo che copriva all'inizio — dipendente privato, Milano,
+anno intero, nessun familiare a carico — verso i casi veri. Il comune scelto da chi calcola e
+il nucleo familiare ci sono. Restano il CCNL e il costo per l'azienda accanto al netto del
+lavoratore. Sono problemi grossi, alcuni più grossi del calcolatore stesso, e li sto
+affrontando uno alla volta.
 
 So che di strumenti così ne esistono già, compreso quello di Jet HR. Non sto provando a
 sostituirli. Questo serve prima di tutto a me: per imparare a costruire qualcosa che regge
@@ -157,7 +158,7 @@ calcolatore pubblico — me l'hanno ricordato nei commenti — che questo non so
 node --test prototipo/*.test.js
 ```
 
-Stato verificato: **61 test superati su 61**.
+Stato verificato: **174 test superati su 174**.
 
 ## Come orientarsi
 

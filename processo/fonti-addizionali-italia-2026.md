@@ -58,3 +58,51 @@ giurisdizioni regionali. Sono definitive 3.063 regole comunali pubblicate nel 20
 4.830 usano la disciplina 2025 prorogata e il nuovo comune Castegnero Nanto conserva
 una regola provvisoria 2026 senza pubblicazione precedente. Sei refusi nelle fasce MEF
 2026 a quattro scaglioni sono normalizzati ai tetti canonici 15.000 / 28.000 / 50.000.
+
+## Revisione del 31 agosto 2026 (issue #34): le regole legate ai carichi di famiglia
+
+L'import di #18 aveva escluso di proposito le agevolazioni locali condizionate ai familiari,
+perché il perimetro di allora assumeva «nessun familiare a carico». Con l'art. 12 TUIR nel motore
+quell'assunzione è caduta, e le regole sono state revisionate contando gli enti sui CSV riga per
+riga — sia sul comunale 2026 sia sul comunale 2025, che il dataset usa per i comuni senza delibera
+dell'anno corrente.
+
+**Regionale: 8 giurisdizioni su 21.** In due forme diverse.
+
+| Ente | Regola | Forma |
+|---|---|---|
+| Provincia autonoma di Trento | 246 €/figlio se imponibile ≤ 50.000 | detrazione per figlio |
+| Provincia autonoma di Bolzano | 340 €/figlio se ≤ 90.000, a qualunque età | detrazione per figlio |
+| Sardegna | 200 €/figlio **minorenne** con reddito ≤ 4.000 se ≤ 50.000, +100 se disabile | detrazione, età e reddito propri |
+| Campania | 30 €/figlio se ≤ 28.000 e **almeno 2 figli**; 40 €/figlio disabile | detrazione con minimo sul numero |
+| Piemonte | 100 €/figlio se **più di 2 figli**; 500 €/figlio disabile; nessun tetto di reddito | detrazione |
+| Puglia | 20 €/figlio se **più di 3 figli**, +375 per figlio disabile; nessun tetto | detrazione |
+| Marche | **aliquota 1,23%** se ≤ 50.000 con almeno un figlio L. 104 | non è una detrazione |
+| Veneto | **aliquota 0,9%** se ≤ 50.000 con un familiare disabile a carico | non è una detrazione |
+
+**Comunale: 6 comuni su 7.894**, tutti in provincia di Verona, tutti con la stessa forma —
+un'esenzione la cui soglia sale di 10.000 € per ogni figlio a carico oltre il minimo.
+
+| Comune | Fonte | Soglia base | Minimo figli |
+|---|---|---|---|
+| Bardolino (A650) | 2026 | 35.000 (più esenzione generale a 28.000) | 3 |
+| Bosco Chiesanuova (B073) | 2026 | 50.000 | 4 |
+| Bovolone (B107) | 2025 prorogata | 50.000 | 4 |
+| Negrar di Valpolicella (F861) | 2025 prorogata | 40.000 | 3 |
+| Roverè Veronese (H608) | 2025 prorogata | 50.000 | 4 |
+| Zevio (M172) | 2025 prorogata | 50.000 | 4 |
+
+L'esenzione generale di Bardolino fino a 28.000 € era stata persa dall'import di #18: sta in una
+fascia strutturata di un comune con `FLAG_NUOVA=5`, e la revisione delle fasce era attiva solo per
+il flag `0`. È stata ripristinata insieme alla regola familiare.
+
+**Fuori perimetro, dichiarato nel dataset.** Grottammare (E207) e San Benedetto del Tronto (H769)
+esentano i nuclei con almeno quattro figli minori e ISEE fino a 10.632,94 €; Bosco Chiesanuova ha
+una seconda esenzione per invalidità non inferiore all'80% legata all'ISEE. L'ISEE non si ricava
+dalla RAL: le tre condizioni restano scritte in `condizioniPersonali` e non applicate.
+
+Restano fuori anche due condizioni che il prodotto non può verificare: Marche e Veneto chiedono
+che la **somma dei redditi** dei soggetti che hanno il familiare a carico non superi 50.000 €, e i
+comuni veronesi ragionano sul reddito imponibile **della famiglia**. Qui si guarda il solo reddito
+del dichiarante. Tutte le regole locali rinviano inoltre alla «percentuale e ai mesi di carico»
+dell'art. 12: il perimetro assume anno intero e percentuale intera al dichiarante.

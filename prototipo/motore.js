@@ -273,16 +273,27 @@ function detrazioneSuSoglia(imponibile,importo,soglia,termini){
   return{esito:SPETTA,spettante:mul(importo,rapporto),rapporto,fascia:null,termini:fatti};
 }
 
+/* La lett. c) dà la detrazione «per ciascun figlio di età compresa fra
+   21 e 30 anni, ovvero per ciascun figlio di età pari o superiore a 30
+   anni con disabilità accertata ai sensi dell'art. 3 L. 104/1992». La
+   disabilità toglie il tetto dei 30 anni: non cambia l'importo, e per
+   questo non porta con sé nessuna costante in K. Sotto i 21 anni non
+   toglie niente, perché lì la detrazione non esiste per nessuno. */
+function etaAmmessaArt12(familiare){
+  const F=K.carichiFamiglia.figlio;
+  const eta=familiare.eta;
+  if(eta===null||eta===undefined||eta==='')return false;
+  if(eta<F.etaMinima)return false;
+  return eta<F.etaMassima||!!familiare.disabilita;
+}
+
 /* «In presenza di più figli CHE DANNO DIRITTO alla detrazione»:
    il figlio di quindici anni non porta detrazione e non fa salire
    la soglia per i fratelli. Contarlo sarebbe generoso e sbagliato. */
 function daDirittoAllaDetrazione(familiare){
   if(familiare.tipo!=='figlio')return false;
-  const eta=familiare.eta;
-  if(eta===null||eta===undefined||eta==='')return false;
-  const F=K.carichiFamiglia.figlio;
-  if(eta<F.etaMinima||eta>=F.etaMassima)return false;
-  return dec(String(familiare.reddito??0))<=limiteRedditoFamiliare('figlio',eta);
+  if(!etaAmmessaArt12(familiare))return false;
+  return dec(String(familiare.reddito??0))<=limiteRedditoFamiliare('figlio',familiare.eta);
 }
 
 const TIPI_FAMILIARE=['coniuge','figlio','ascendente'];
@@ -294,6 +305,8 @@ function verificaNucleo(nucleo){
       throw new TypeError(`Tipo di familiare sconosciuto: ${familiare&&familiare.tipo}`);
     if(familiare.tipo==='coniuge'&&++coniugi>1)
       throw new RangeError('Si dichiara un solo coniuge a carico');
+    if(familiare.disabilita!==undefined&&typeof familiare.disabilita!=='boolean')
+      throw new TypeError(`Disabilità non valida: ${familiare.disabilita}`);
     const eta=familiare.eta;
     if(eta===null||eta===undefined||eta==='')continue;
     if(!Number.isInteger(eta)||eta<0)throw new RangeError(`Età non valida: ${eta}`);
@@ -311,7 +324,8 @@ function detrazioniCarichiFamiglia(imponibile,nucleo=[]){
     const eta=familiare.eta===undefined||familiare.eta===''?null:familiare.eta;
     const redditoFamiliare=dec(String(familiare.reddito??0));
     const limite=limiteRedditoFamiliare(tipo,eta);
-    const comune={tipoFamiliare:tipo,eta,redditoFamiliare,limiteRedditoFamiliare:limite};
+    const disabilita=!!familiare.disabilita;
+    const comune={tipoFamiliare:tipo,eta,disabilita,redditoFamiliare,limiteRedditoFamiliare:limite};
     const fuori=esito=>({...comune,esito,spettante:0n,rapporto:null,fascia:null,termini:{}});
 
     /* Per i figli l'età viene prima del reddito: è la condizione
@@ -320,7 +334,7 @@ function detrazioniCarichiFamiglia(imponibile,nucleo=[]){
     if(tipo==='figlio'){
       if(eta===null)return fuori('etaNonDichiarata');
       if(eta<F.figlio.etaMinima)return fuori('assorbitaAssegnoUnico');
-      if(eta>=F.figlio.etaMassima)return fuori('oltreTrentaAnni');
+      if(eta>=F.figlio.etaMassima&&!disabilita)return fuori('oltreTrentaAnni');
     }
     if(redditoFamiliare>limite)return fuori(NON_A_CARICO);
     if(tipo==='coniuge')return{...comune,...detrazioneConiuge(imponibile)};
@@ -378,7 +392,77 @@ function ripartisciCapienza(spettanti,residua){
    imposta azzerata dalle detrazioni non c'è addizionale. */
 function regolaDecimale(n){return dec(String(n??0));}
 function scaglioniDecimali(scaglioni){return scaglioni.map(([t,a])=>[t===null?null:dec(String(t)),regolaDecimale(a)]);}
-function detrazioneLocale(imponibile,detrazioni=[]){
+
+/* ------------------------------------------------------------
+   LA FAMIGLIA DENTRO LE REGOLE LOCALI
+   Nove regioni e sei comuni guardano i figli a carico, e non lo
+   fanno tutti allo stesso modo: sei aggiungono una DETRAZIONE per
+   figlio, due cambiano l'ALIQUOTA, sei comuni cambiano l'ESENZIONE.
+   Sono tre meccanismi distinti, e restano distinti anche qui.
+
+   Il nucleo arriva intero, minorenni compresi: il filtro sta in
+   queste funzioni e mai sull'input, altrimenti il dato locale non
+   sarebbe più ricostruibile. Sardegna vuole proprio i minorenni,
+   e i comuni veronesi contano i figli senza limite d'età.
+   ------------------------------------------------------------ */
+
+/* «A carico» dell'art. 12 c. 2 è una condizione di reddito, non di
+   età: il figlio di dieci anni è a carico anche se la detrazione
+   nazionale non gli spetta. Quando l'età non è dichiarata non si sa
+   quale dei due limiti valga, e si usa il più stretto. */
+function aCaricoPerReddito(familiare,limiteEsplicito){
+  const limite=limiteEsplicito!==undefined?dec(String(limiteEsplicito))
+    :(familiare.tipo==='figlio'
+      ?(limiteRedditoFamiliare('figlio',familiare.eta)??K.carichiFamiglia.redditoMassimoFamiliare)
+      :K.carichiFamiglia.redditoMassimoFamiliare);
+  return dec(String(familiare.reddito??0))<=limite;
+}
+
+/* I figli che una singola regola locale conta. Ogni criterio è un
+   campo del dato, non un ramo indovinato dal nome dell'ente. */
+function figliContati(famiglia,criterio={}){
+  return (famiglia||[]).filter(f=>{
+    if(!f||f.tipo!=='figlio')return false;
+    if(criterio.soloDisabili&&!f.disabilita)return false;
+    if(criterio.tettoTrentaAnni&&!etaAmmessaSalvoDisabilita(f))return false;
+    if(criterio.etaMassima!==undefined){
+      if(f.eta===null||f.eta===undefined||f.eta==='')return false;
+      if(f.eta>=criterio.etaMassima)return false;
+    }
+    return aCaricoPerReddito(f,criterio.redditoMassimoFiglio);
+  });
+}
+function etaAmmessaSalvoDisabilita(familiare){
+  const eta=familiare.eta;
+  if(eta===null||eta===undefined||eta==='')return true;
+  return eta<K.carichiFamiglia.figlio.etaMassima||!!familiare.disabilita;
+}
+
+/* Marche e Veneto: l'agevolazione non toglie euro all'imposta, la
+   ricalcola da capo con un'altra aliquota. Le Marche chiedono un
+   figlio, il Veneto un familiare qualunque. */
+function aliquotaFamiliareApplicabile(imponibile,regola,famiglia){
+  const a=regola&&regola.aliquotaFamiliare;
+  if(!a)return null;
+  if(a.finoA!==undefined&&imponibile>dec(String(a.finoA)))return null;
+  const candidati=(famiglia||[]).filter(f=>f&&f.disabilita&&
+    (a.richiede==='figlioDisabile'?f.tipo==='figlio':TIPI_FAMILIARE.includes(f.tipo)));
+  return candidati.some(f=>aCaricoPerReddito(f))?regolaDecimale(a.aliquota):null;
+}
+
+/* I sei comuni veronesi: l'esenzione non è un importo ma una soglia
+   che SALE con i figli. Il numero minimo è una condizione d'accesso,
+   quindi sotto quel numero la soglia familiare non esiste affatto. */
+function sogliaEsenzioneFamiliare(regola,famiglia){
+  const e=regola&&regola.esenzioneFamiliare;
+  if(!e)return null;
+  const quanti=figliContati(famiglia,e).length;
+  const minimo=e.minimoFigli??1;
+  if(quanti<minimo)return null;
+  return dec(String(e.finoA))+dec(String(e.incrementoPerFiglio??0))*BigInt(quanti-minimo);
+}
+
+function detrazioneLocale(imponibile,detrazioni=[],famiglia=[]){
   let totale=0n;
   for(const d of detrazioni){
     const oltre=d.oltre===undefined?null:dec(String(d.oltre));
@@ -389,14 +473,25 @@ function detrazioneLocale(imponibile,detrazioni=[]){
       const da=dec(String(d.progressivaDa)),ampiezza=dec(String(d.ampiezza));
       totale+=min(dec(String(d.massimo)),mul(dec(String(d.massimo)),div(imponibile-da,ampiezza)));
     }
+    else if(d.perFiglio!==undefined){
+      const p=d.perFiglio,figli=figliContati(famiglia,p);
+      if(figli.length<(p.minimoFigli??1))continue;
+      totale+=dec(String(p.importo))*BigInt(figli.length);
+      if(p.supplementoDisabile!==undefined)
+        totale+=dec(String(p.supplementoDisabile))*BigInt(figli.filter(f=>f.disabilita).length);
+    }
   }
   return totale;
 }
-function calcolaAddizionale(imponibile,dovute,regola){
+function calcolaAddizionale(imponibile,dovute,regola,famiglia=[]){
   if(!dovute||!regola||regola.tipo==='nessuna')return 0n;
+  const sogliaFamiliare=sogliaEsenzioneFamiliare(regola,famiglia);
+  if(sogliaFamiliare!==null&&imponibile<=sogliaFamiliare)return 0n;
   if(regola.esenzioneFinoA&&imponibile<=dec(String(regola.esenzioneFinoA)))return 0n;
   let imposta=0n;
-  if(regola.fasciaInteraFinoA&&imponibile<=dec(String(regola.fasciaInteraFinoA[0])))
+  const agevolata=aliquotaFamiliareApplicabile(imponibile,regola,famiglia);
+  if(agevolata!==null)imposta=mul(imponibile,agevolata);
+  else if(regola.fasciaInteraFinoA&&imponibile<=dec(String(regola.fasciaInteraFinoA[0])))
     imposta=mul(imponibile,regolaDecimale(regola.fasciaInteraFinoA[1]));
   else if(regola.tipo==='aliquotaUnica')imposta=mul(imponibile,regolaDecimale(regola.aliquota));
   else if(regola.tipo==='scaglioni')imposta=perScaglioni(imponibile,scaglioniDecimali(regola.scaglioni));
@@ -404,18 +499,18 @@ function calcolaAddizionale(imponibile,dovute,regola){
     const fascia=regola.fasce.find(([t])=>t===null||imponibile<=dec(String(t)));
     imposta=fascia?mul(imponibile,regolaDecimale(fascia[1])):0n;
   }else throw new TypeError(`Tipo di addizionale sconosciuto: ${regola.tipo}`);
-  const detrazione=detrazioneLocale(imponibile,regola.detrazioni);
+  const detrazione=detrazioneLocale(imponibile,regola.detrazioni,famiglia);
   return imposta>detrazione?imposta-detrazione:0n;
 }
-function addizionaleRegionale(imponibile,dovute,regola){
-  return regola?calcolaAddizionale(imponibile,dovute,regola)
+function addizionaleRegionale(imponibile,dovute,regola,famiglia=[]){
+  return regola?calcolaAddizionale(imponibile,dovute,regola,famiglia)
     :(dovute?perScaglioni(imponibile,K.regionale.scaglioni):0n);
 }
 
 /* Esenzione secca, non franchigia: superati i 23.000 € si paga
    sull'intero imponibile, non sull'eccedenza. */
-function addizionaleComunale(imponibile,dovute,regola){
-  return regola?calcolaAddizionale(imponibile,dovute,regola)
+function addizionaleComunale(imponibile,dovute,regola,famiglia=[]){
+  return regola?calcolaAddizionale(imponibile,dovute,regola,famiglia)
     :((dovute&&imponibile>K.comunale.esenzioneFinoA)?mul(imponibile,K.comunale.aliquota):0n);
 }
 
@@ -530,15 +625,19 @@ function calcola(ralInput,opzioni={}){
   const LETTERA={coniuge:'tuir12a',figlio:'tuir12c',ascendente:'tuir12d'};
   famiglia.forEach((f,i)=>emetti(`detrfam${i+1}`,'detrazione',LETTERA[f.tipoFamiliare],I,
     ripartizione.usi[i],{
-      tipoFamiliare:f.tipoFamiliare,eta:f.eta,esito:f.esito,fascia:f.fascia,
+      tipoFamiliare:f.tipoFamiliare,eta:f.eta,disabilita:f.disabilita,
+      esito:f.esito,fascia:f.fascia,
       redditoFamiliare:f.redditoFamiliare,limiteRedditoFamiliare:f.limiteRedditoFamiliare,
       spettante:spettantiFamiglia[i],capiente:ripartizione.usi[i]>=spettantiFamiglia[i],
       rapporto:f.rapporto,termini:f.termini}));
 
-  /* 7-8. addizionali locali */
+  /* 7-8. addizionali locali. Il nucleo arriva anche qui: otto
+     giurisdizioni e sei comuni lo guardano, e senza passarglielo
+     l'addizionale di quegli enti sarebbe incompleta in silenzio. */
   const dovute=netta>0n;
-  const reg=addizionaleRegionale(I,dovute,geo.regionale);
-  const com=addizionaleComunale(I,dovute,geo.comunale);
+  const nucleo=opzioni.nucleo||[];
+  const reg=addizionaleRegionale(I,dovute,geo.regionale,nucleo);
+  const com=addizionaleComunale(I,dovute,geo.comunale,nucleo);
   emetti('addreg','imposta',{tipo:'regionale',...geo.regionale.fonte},I,-reg,
     {dovuta:dovute,regola:geo.regionale,nome:geo.regione.nome});
   emetti('addcom','imposta',{tipo:'comunale',...geo.comunale.fonte},I,-com,
@@ -558,7 +657,7 @@ function calcola(ralInput,opzioni={}){
   const conti=riconcilia(RAL,voci);
   const netto=conti.netto;
   const imposte=arrotondaCentesimi(netta)+arrotondaCentesimi(reg)+arrotondaCentesimi(com);
-  return{input:{ral:toNumber(RAL),comune:geo.comune.catastale},versioneRegole:'regole-2026-v2',
+  return{input:{ral:toNumber(RAL),comune:geo.comune.catastale},versioneRegole:'regole-2026-v3',
     geografia:{regione:geo.regione.nome,provincia:geo.provincia.nome,comune:geo.comune.nome,
       catastale:geo.comune.catastale,asOf:geo.meta.asOf},
     voci:voci.map(({_i,...r})=>r),
@@ -621,7 +720,7 @@ const EVENTI_NAZIONALI=[
   {imponibile:25000,causa:'si attiva la maggiorazione di 65 € (imponibile 25.000 €)'},
   {imponibile:35000,causa:'decade la maggiorazione di 65 € (imponibile 35.000 €)'},
 ];
-function confiniRegola(regola){
+function confiniRegola(regola,famiglia=[]){
   const confini=new Map();
   const aggiungi=(imponibile,tipo)=>{
     const n=Number(imponibile),tipi=confini.get(n)||[];
@@ -630,11 +729,23 @@ function confiniRegola(regola){
   };
   if(Number(regola.esenzioneFinoA)>0)
     aggiungi(regola.esenzioneFinoA,'esenzione');
+  /* La soglia dei comuni veronesi non è un numero della delibera: è
+     un numero della delibera PIÙ i figli dichiarati. Senza il nucleo
+     la pagina racconterebbe il salto di un'altra famiglia. */
+  const familiare=sogliaEsenzioneFamiliare(regola,famiglia);
+  if(familiare!==null)aggiungi(toNumber(familiare),'esenzione per figli a carico');
+  if(regola.aliquotaFamiliare&&regola.aliquotaFamiliare.finoA!==undefined)
+    aggiungi(regola.aliquotaFamiliare.finoA,'aliquota agevolata per la famiglia');
   if(regola.fasciaInteraFinoA)
     aggiungi(regola.fasciaInteraFinoA[0],'fascia intera');
   if(regola.tipo==='aliquotePerReddito')for(const [tetto] of regola.fasce||[])
     if(tetto!==null)aggiungi(tetto,'fascia sull’intero reddito');
   for(const d of regola.detrazioni||[]){
+    if(d.perFiglio!==undefined){
+      if(d.oltre!==undefined)aggiungi(d.oltre,'inizio detrazione per figli a carico');
+      if(d.finoA!==undefined)aggiungi(d.finoA,'fine detrazione per figli a carico');
+      continue;
+    }
     if(d.fissa===undefined)continue; // la detrazione progressiva è continua
     if(d.oltre!==undefined)aggiungi(d.oltre,'inizio detrazione generale');
     if(d.finoA!==undefined)aggiungi(d.finoA,'fine detrazione generale');
@@ -649,9 +760,12 @@ function soglie(opzioni={}){
   const nucleo=opzioni.nucleo||[];
   /* La chiave porta anche il nucleo: le detrazioni di famiglia
      possono azzerare l'IRPEF netta, e allora un salto che esiste
-     per un contribuente solo non esiste più per una famiglia. */
+     per un contribuente solo non esiste più per una famiglia.
+     La disabilità sta nella chiave perché cambia da sola l'aliquota
+     nelle Marche e in Veneto: due nuclei identici tranne quel flag
+     hanno soglie diverse, e senza il flag si scambierebbero. */
   const chiave=geo.comune.catastale+'|'+
-    nucleo.map(f=>`${f.tipo}${f.eta??''}:${f.reddito??0}`).join(',');
+    nucleo.map(f=>`${f.tipo}${f.eta??''}${f.disabilita?'*':''}:${f.reddito??0}`).join(',');
   if(CACHE_SOGLIE.has(chiave))return CACHE_SOGLIE.get(chiave);
   const risultato=[];
   for(const evento of EVENTI_NAZIONALI){
@@ -664,7 +778,7 @@ function soglie(opzioni={}){
   for(const [ambito,regola,nome,id] of [
     ['regionale',geo.regionale,geo.regione.nome,'addreg'],
     ['comunale',geo.comunale,geo.comune.nome,'addcom'],
-  ])for(const confine of confiniRegola(regola)){
+  ])for(const confine of confiniRegola(regola,nucleo)){
     const ral=ralOltreImponibile(confine.imponibile);
     const sopra=calcola(ral,{comune:geo.comune.catastale,nucleo}),
       sotto=calcola((Number(ral)-.01).toFixed(2),{comune:geo.comune.catastale,nucleo});

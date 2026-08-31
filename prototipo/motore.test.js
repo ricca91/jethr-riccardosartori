@@ -716,6 +716,34 @@ test.describe('E — figli a carico (art. 12 c. 1 lett. c)',()=>{
     assert.deepEqual(esiti('31783.50',[figlio(30)]),['oltreTrentaAnni']);
   });
 
+  /* La lett. c) dà 950 euro «per ciascun figlio di età compresa fra 21 e 30
+     anni, ovvero per ciascun figlio di età pari o superiore a 30 anni con
+     disabilità accertata». La disabilità toglie il tetto dei 30 anni: non
+     esiste più nessuna maggiorazione d'importo, e infatti in K non c'è. */
+  const disabile=eta=>({tipo:'figlio',eta,disabilita:true});
+
+  test('la disabilità toglie il tetto dei 30 anni e non cambia l\'importo',()=>{
+    assert.deepEqual(esiti('31783.50',[figlio(35)]),['oltreTrentaAnni']);
+    assert.deepEqual(esiti('31783.50',[disabile(35)]),['spetta']);
+    assert.deepEqual(spettante('31783.50',[disabile(35)]),[632.13]);
+  });
+
+  /* Sotto i 21 anni non c'è niente da togliere: l'Assegno Unico ha preso
+     il posto della detrazione per tutti i figli, disabili compresi. */
+  test('sotto i 21 anni la disabilità non fa nascere una detrazione che non c\'è',()=>{
+    assert.deepEqual(esiti('31783.50',[disabile(10)]),['assorbitaAssegnoUnico']);
+    assert.deepEqual(spettante('31783.50',[disabile(10)]),[0]);
+  });
+
+  test('il figlio disabile oltre i 30 alza la soglia dei fratelli',()=>{
+    assert.deepEqual(spettante('31783.50',[figlio(22),disabile(35)]),[675.45,675.45]);
+  });
+
+  test('la disabilità esce come fatto della valutazione',()=>{
+    const v=detrazioniCarichiFamiglia(dec('31783.50'),[disabile(35),figlio(22)]);
+    assert.deepEqual(v.map(x=>x.disabilita),[true,false]);
+  });
+
   /* L'età è il fatto che decide. Se manca, il motore non inventa un
      default: dichiara che manca, e la pagina lo dice. */
   test('senza età dichiarata il motore dice che il fatto manca',()=>{
@@ -790,6 +818,11 @@ test.describe('E — il nucleo come input del motore',()=>{
     assert.throws(()=>detrazioniCarichiFamiglia(dec('31783.50'),[{tipo:'figlio',eta:1.5}]),/Età/);
   });
 
+  test('rifiuta una disabilità che non è un sì o un no',()=>{
+    assert.throws(()=>detrazioniCarichiFamiglia(dec('31783.50'),
+      [{tipo:'figlio',eta:35,disabilita:'sì'}]),/[Dd]isabilit/);
+  });
+
   test('senza nucleo non valuta niente',()=>{
     assert.deepEqual(detrazioniCarichiFamiglia(dec('31783.50')),[]);
     assert.deepEqual(detrazioniCarichiFamiglia(dec('31783.50'),[]),[]);
@@ -862,6 +895,18 @@ test.describe('E — i carichi di famiglia dentro calcola()',()=>{
     assert.equal(voci[1].spettante,0);
   });
 
+  /* E vale anche quando chi non ha diritto è l'ULTIMO della lista:
+     è lì che il resto dell'arrotondamento andrebbe a finire se il
+     destinatario fosse scelto per posizione invece che per diritto.
+     A RAL 10.354 il resto vale un centesimo, e un centesimo dato a
+     chi non ha diritto è un diritto inventato. */
+  test('il resto dell\'arrotondamento non atterra sull\'ultimo per posizione',()=>{
+    const voci=famiglia(conNucleo('10354.00',
+      [{tipo:'coniuge'},{tipo:'ascendente'},{tipo:'figlio',eta:15}]));
+    assert.deepEqual(voci.map(v=>v.importo),[108.94,98.63,0]);
+    assert.equal(c2(voci.reduce((a,v)=>a+v.importo,0)),207.57);
+  });
+
   /* A IRPEF netta azzerata dalle detrazioni non c'è addizionale:
      è la stessa regola che vale già per le detrazioni da lavoro. */
   test('se le detrazioni di famiglia azzerano l\'IRPEF, le addizionali non sono dovute',()=>{
@@ -902,5 +947,53 @@ test.describe('E — le soglie con un nucleo dichiarato',()=>{
     const due=soglie({comune:'F205',nucleo:NUCLEO});
     assert.notDeepEqual(uno,due);
     assert.deepEqual(soglie({comune:'F205',nucleo:[{tipo:'coniuge'}]}),uno);
+  });
+});
+
+
+/* ============================================================
+   E — LA MONOTONIA DEL NUCLEO
+   Non è un'ancora e non è una rete: è una PROPRIETÀ. Un familiare a
+   carico in più non può mai far scendere il netto, a nessuna RAL.
+   Vale sia dove le regole locali ignorano la famiglia (Milano) sia
+   dove la guardano (Torino, che detrae dal terzo figlio in su, e
+   Bardolino, dove l'esenzione comunale sale con i figli).
+   ============================================================ */
+test.describe('E — un familiare in più non fa mai scendere il netto',()=>{
+  const G=require('./geografia.js');
+  const cat=nome=>G.comuni().find(c=>c.nome===nome).catastale;
+  const PASSO=250,MASSIMO=150000;
+
+  const cadute=(comune,prima,dopo)=>{
+    const trovate=[];
+    for(let ral=0;ral<=MASSIMO;ral+=PASSO){
+      const senza=c2(calcola(String(ral),{comune,nucleo:prima}).kpi.nettoAnnuo);
+      const con=c2(calcola(String(ral),{comune,nucleo:dopo}).kpi.nettoAnnuo);
+      if(con<senza)trovate.push({ral,senza,con});
+    }
+    return trovate;
+  };
+  const figlio=eta=>({tipo:'figlio',eta});
+
+  test('Milano: un figlio di 22 anni non toglie mai un centesimo',()=>{
+    assert.deepEqual(cadute(cat('Milano'),[],[figlio(22)]),[]);
+  });
+
+  test('Milano: il familiare aggiunto può anche non portare detrazione',()=>{
+    assert.deepEqual(cadute(cat('Milano'),[],[figlio(17)]),[]);
+    assert.deepEqual(cadute(cat('Milano'),[figlio(22)],[figlio(22),{tipo:'coniuge'}]),[]);
+  });
+
+  /* Il terzo figlio apre la detrazione regionale del Piemonte per TUTTI
+     e tre: è il punto in cui una soglia sul numero potrebbe far scendere
+     il netto se fosse scritta male. */
+  test('Torino: il terzo figlio apre la detrazione regionale e non toglie niente',()=>{
+    assert.deepEqual(cadute(cat('Torino'),
+      [figlio(10),figlio(12)],[figlio(10),figlio(12),figlio(14)]),[]);
+  });
+
+  test('Bardolino: il figlio che alza la soglia dell\'esenzione comunale',()=>{
+    assert.deepEqual(cadute(cat('Bardolino'),
+      [figlio(10),figlio(12)],[figlio(10),figlio(12),figlio(14)]),[]);
   });
 });

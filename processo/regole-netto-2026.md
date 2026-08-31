@@ -1,6 +1,14 @@
 # RAL → netto: cosa si trattiene davvero nel caso standard Jet HR
 
-_Ricerca verificata l'11 agosto 2026. Perimetro: dipendente del settore privato, impiegato a tempo indeterminato, residente fiscalmente a Milano per tutto l'anno, un solo datore, rapporto attivo per 365 giorni, nessun familiare a carico, nessun altro reddito/onere/detrazione/agevolazione individuale, nessun benefit o premio. Non è un cedolino né un parere professionale._
+_Ricerca verificata l'11 agosto 2026, perimetro aggiornato il 31 agosto 2026. Perimetro: dipendente del settore privato, impiegato a tempo indeterminato, residente fiscalmente per tutto l'anno in un comune italiano scelto fra i 7.894 dell'anagrafica Istat vigente (#18), un solo datore, rapporto attivo per 365 giorni, con o senza familiari a carico dell'art. 12 TUIR (#34), nessun altro reddito/onere/detrazione/agevolazione individuale, nessun benefit o premio. Non è un cedolino né un parere professionale._
+
+> **Due assunzioni del testo originale sono decadute.** La ricerca dell'11 agosto assumeva
+> «residente fiscalmente a Milano» e «nessun familiare a carico». La prima è caduta con la
+> [#18](https://github.com/ricca91/jethr-riccardosartori/issues/18), che ha portato tutti i comuni
+> italiani; la seconda con la [#34](https://github.com/ricca91/jethr-riccardosartori/issues/34),
+> che ha portato l'art. 12 TUIR nel motore. Il resto del documento è la fotografia della ricerca
+> di allora: le assunzioni valide oggi sono quelle qui sopra e quelle della sezione
+> «Carichi di famiglia» in fondo.
 
 ## Risposta breve
 
@@ -215,12 +223,13 @@ I valori sono arrotondati al centesimo per leggibilità; un payroll reale applic
 - 9,19% FPLD a carico lavoratore;
 - IRPEF 2026 con scaglioni 23% / 33% / 43%;
 - detrazione art. 13, incremento di 65 euro e misura generale 20–40k;
+- detrazioni per carichi di famiglia dell'art. 12, quando il nucleo è dichiarato;
 - addizionale Lombardia e Milano maturate;
 - eventuali integrazioni generali per RAL basse, visibili separatamente.
 
 ### Esclusioni da dichiarare
 
-- altro reddito, coniuge/figli a carico, spese e oneri deducibili/detraibili;
+- altro reddito, spese e oneri deducibili/detraibili;
 - premi di risultato, straordinari, bonus, stock option, welfare, benefit e rimborsi;
 - CCNL, settore/CSC, fondi di solidarietà, fondi sanitari e previdenza complementare;
 - cessioni/pignoramenti/deleghe/sindacato;
@@ -249,3 +258,63 @@ Questo è abbastanza rigoroso per dimostrare comprensione del dominio senza fing
 - [INPS, circolare n. 6/2026](https://www.inps.it/it/it/inps-comunica/atti/circolari-messaggi-e-normativa/dettaglio.circolari-e-messaggi.2026.01.circolare-numero-6-del-30-01-2026_15151.html) — soglia 1% e massimale 2026.
 - [Regione Lombardia — addizionale regionale IRPEF](https://www.regione.lombardia.it/bollo-auto-e-tributi-regionali/red-addizionale-regionale-irpef) — aliquote regionali e sostituto d'imposta.
 - [Comune di Milano — addizionale comunale IRPEF](https://www.comune.milano.it/argomenti/tributi/addizionale-comunale-irpef) — aliquota, soglia e acconto.
+
+## Carichi di famiglia (aggiornamento del 31 agosto 2026, #34)
+
+L'assunzione «nessun familiare a carico» non vale più: il motore calcola le detrazioni
+dell'[art. 12 TUIR](https://def.giustiziatributaria.gov.it/DocTribFrontend/getAttoNormativoDetail.do?ACTION=getArticolo&articolo=Articolo+12&id=%7B31D694E8-4398-4030-873B-FEAF5A6647F9%7D)
+come modificato dall'art. 1 c. 11 della [L. 207/2024](https://www.normattiva.it/eli/stato/LEGGE/2024/12/30/207/CONSOLIDATED/20251219),
+e le regole locali che dipendono dai figli a carico. Il default resta «nessun familiare»:
+senza nucleo dichiarato ogni voce e ogni KPI sono identici a prima.
+
+### Cosa è calcolato
+
+- **Coniuge** (c. 1 lett. a e b): tre fasce più i cinque scalini di maggiorazione fra 29.000 e 35.200 €.
+- **Figli** (c. 1 lett. c): 950 € per il rapporto sulla soglia di 95.000 €, che cresce di 15.000 €
+  per ogni figlio *che dà diritto* alla detrazione oltre il primo. Spetta dai 21 ai 29 anni compiuti,
+  e dai 30 in su al solo figlio con **disabilità accertata** ex art. 3 L. 104/1992. La disabilità
+  toglie il tetto d'età: non esiste nessuna maggiorazione d'importo, e il comma 1-bis (1.200 € per
+  almeno quattro figli) è abrogato.
+- **Altri familiari** (c. 1 lett. d): 750 € sulla soglia di 80.000 €, ai soli ascendenti conviventi.
+- **Comma 2**: il limite di reddito del familiare (2.840,51 €, elevato a 4.000 € per i figli fino a
+  24 anni) è una condizione di validità della dichiarazione. Il motore la **espone come fatto** e la
+  applica al reddito dichiarato dall'utente; non conosce e non verifica il reddito reale del familiare.
+- **Comma 4**: i rapporti si troncano alla quarta cifra decimale, come quelli dell'art. 13. Rapporto
+  pari a zero, negativo o — per le lett. c) e d) — pari a uno: la detrazione non compete.
+- **Regole locali**: otto giurisdizioni regionali e sei comuni cambiano l'addizionale in base ai figli
+  a carico. Sei detraggono un importo per figlio (Trento 246 €, Bolzano 340 €, Sardegna 200 € per
+  figlio minorenne più 100 € se disabile, Campania 30 € da due figli in su più 40 € per figlio
+  disabile, Piemonte 100 € da tre figli in su più 500 € per figlio disabile, Puglia 20 € da quattro
+  figli in su più 375 € per figlio disabile). Due cambiano l'**aliquota** (Marche 1,23% con un figlio
+  con handicap, Veneto 0,9% con un familiare disabile a carico, entrambe fino a 50.000 € di
+  imponibile). Sei comuni veronesi — Bardolino, Bosco Chiesanuova, Bovolone, Negrar di Valpolicella,
+  Roverè Veronese e Zevio — non applicano l'addizionale comunale alle famiglie numerose, con una
+  soglia di esenzione che sale di 10.000 € per ogni figlio oltre il minimo.
+
+### Cosa è assunto
+
+- **«Reddito complessivo» = imponibile IRPEF** (RAL − contributi). L'art. 12 usa lo stesso termine
+  dell'art. 13, cui il motore già passa l'imponibile; con un solo reddito da lavoro dipendente le due
+  letture coincidono. Il c. 4-bis lo vorrebbe al netto della rendita dell'abitazione principale:
+  non ci sono redditi fondiari nel perimetro.
+- **Anno intero.** Il c. 3 rapporta le detrazioni ai mesi in cui il carico è esistito: qui si assumono
+  dodici mesi.
+- **Percentuale intera al dichiarante.** La lett. c) ripartisce la detrazione per figli **al 50% fra i
+  genitori** salvo accordo diverso, e la lett. d) la divide pro quota fra gli aventi diritto. Il motore
+  la assegna per intero a chi calcola. È l'unica assunzione del perimetro che **gonfia** il risultato
+  invece di essere conservativa, e per questo è dichiarata a schermo e non solo qui.
+- Le regole locali per la famiglia guardano il **solo reddito del dichiarante**. Marche e Veneto
+  chiedono che la somma dei redditi dei genitori non superi 50.000 €; i comuni veronesi ragionano sul
+  reddito imponibile della famiglia. Il prodotto non conosce il reddito dell'altro genitore.
+
+### Cosa è fuori perimetro, dichiarato
+
+- **Comma 2-bis**: nessuna detrazione ai contribuenti non cittadini UE/SEE per familiari residenti
+  all'estero. Serve documentazione che la sola RAL non porta: la condizione è dichiarata, non modellata.
+- **Esenzioni comunali legate all'ISEE**: Grottammare e San Benedetto del Tronto esentano i nuclei con
+  almeno quattro figli minori e ISEE fino a 10.632,94 €; Bosco Chiesanuova ha una seconda esenzione
+  legata a invalidità e ISEE. L'ISEE non si ricava dalla RAL. Le tre condizioni sono dichiarate nel
+  dataset in `condizioniPersonali`.
+- **Aliquota veneta ridotta per il contribuente disabile in prima persona**: non è un dato del nucleo
+  familiare, e il prodotto non chiede all'utente se ha una disabilità.
+- **Fratelli, nipoti, generi e nuore**: non sono «altri familiari» dell'art. 12 dopo la riforma.

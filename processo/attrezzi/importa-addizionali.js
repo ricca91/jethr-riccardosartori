@@ -21,6 +21,10 @@ const ROOT=path.resolve(__dirname,'../..');
 const SRC=path.join(ROOT,'processo/dati/fonti');
 const OUT=path.join(ROOT,'prototipo/dati-addizionali-2026.js');
 const AS_OF='2026-08-26';
+/* La revisione del 31 agosto 2026 (issue #34) non cambia le fonti: usa gli
+ * stessi CSV di AS_OF e vi aggiunge le regole locali legate ai carichi di
+ * famiglia, che l'import di #18 aveva escluso di proposito. */
+const REVISIONE='2026-08-31';
 const URL_ISTAT='https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.xlsx';
 const URL_REG='https://www1.finanze.gov.it/finanze2/dipartimentopolitichefiscali/fiscalitalocale/addregirpef/download/tabella.htm';
 const URL_COM='https://www1.finanze.gov.it/finanze2/dipartimentopolitichefiscali/fiscalitalocale/nuova_addcomirpef/download/tabella.htm';
@@ -107,6 +111,31 @@ function esenzioneGeneraleRevisionata(r){
   }
   return 0;
 }
+/* I comuni la cui esenzione dipende dai figli a carico. La soglia sale di un
+ * importo fisso per ogni figlio oltre il minimo: non e' una detrazione, e per
+ * questo non sta nell'array `detrazioni`.
+ * `residuo` dichiara quel che di quella delibera resta comunque fuori: dove
+ * la condizione e' l'ISEE non c'e' niente da normalizzare, perche' l'ISEE non
+ * si ricava dalla RAL. */
+const SPECIALI_COMUNALI={
+  A650:{esenzioneFinoA:28000,
+    esenzioneFamiliare:{finoA:35000,minimoFigli:3,incrementoPerFiglio:10000},
+    revisione:'Esenzione generale fino a 28.000 euro; esenzione fino a 35.000 euro per le famiglie con tre o più figli a carico, elevata di 10.000 euro per ogni figlio oltre il terzo.'},
+  B073:{esenzioneFamiliare:{finoA:50000,minimoFigli:4,incrementoPerFiglio:10000},
+    revisione:'Esenzione fino a 50.000 euro per le famiglie con quattro figli a carico, elevata di 10.000 euro per ogni figlio oltre il quarto.',
+    residuo:'Resta fuori l’esenzione per invalidità non inferiore all’80% condizionata all’ISEE: l’ISEE non si ricava dalla RAL.'},
+  B107:{esenzioneFamiliare:{finoA:50000,minimoFigli:4,incrementoPerFiglio:10000},
+    revisione:'Esenzione fino a 50.000 euro per i nuclei con quattro figli a carico, elevata di 10.000 euro per ogni figlio oltre il quarto.'},
+  F861:{esenzioneFamiliare:{finoA:40000,minimoFigli:3,incrementoPerFiglio:10000},
+    revisione:'Esenzione fino a 40.000 euro per le famiglie con tre figli a carico, elevata di 10.000 euro per ogni figlio a partire dal quarto.'},
+  H608:{esenzioneFamiliare:{finoA:50000,minimoFigli:4,incrementoPerFiglio:10000},
+    revisione:'Esenzione fino a 50.000 euro per le famiglie con quattro figli a carico, elevata di 10.000 euro per ogni figlio oltre il quarto.'},
+  M172:{esenzioneFamiliare:{finoA:50000,minimoFigli:4,incrementoPerFiglio:10000},
+    revisione:'Esenzione fino a 50.000 euro per i soggetti con quattro figli a carico, elevata di 10.000 euro per ogni ulteriore figlio a carico.'},
+  E207:{residuo:'Esenzione per almeno quattro figli minori condizionata a un ISEE fino a 10.632,94 euro: l’ISEE non si ricava dalla RAL e la condizione non è applicata.'},
+  H769:{residuo:'Esenzione per i nuclei con almeno quattro figli minori condizionata a un ISEE familiare fino a 10.632,94 euro: l’ISEE non si ricava dalla RAL e la condizione non è applicata.'},
+};
+
 function fonteComune(r,anno,provisional){return{
   annoOrigine:anno,asOf:AS_OF,stato:provisional?'provvisorio':'definitivo',
   numeroDelibera:r.NUMERO_DELIBERA||null,dataDelibera:r.DATA_DELIBERA||null,
@@ -116,28 +145,49 @@ function fonteComune(r,anno,provisional){return{
 function regolaComune(r,anno,provisional){
   if(!r||r.ALIQUOTA==='0*')return{tipo:'nessuna',fonte:fonteComune(r||{},anno,provisional)};
   const s=scaglioni(r),flag=r.FLAG_NUOVA||'assenza';
-  const esenzione=(numero(r.IMPORTO_ESENTE)||0)||(flag==='0'?esenzioneGeneraleRevisionata(r):0);
-  const speciale=['0','5','6'].includes(flag);
+  const revisionato=SPECIALI_COMUNALI[r.CODICE_CATASTALE]||{};
+  const esenzione=revisionato.esenzioneFinoA!==undefined?revisionato.esenzioneFinoA
+    :((numero(r.IMPORTO_ESENTE)||0)||(flag==='0'?esenzioneGeneraleRevisionata(r):0));
+  const personali=['0','5','6'].includes(flag);
   const base=!s.length||s.every(([,a])=>a===0)?{tipo:'nessuna'}:s.length===1
     ?{tipo:'aliquotaUnica',aliquota:s[0][1],esenzioneFinoA:esenzione}
     :{tipo:'scaglioni',scaglioni:s,esenzioneFinoA:esenzione};
-  return{...base,casoMef:flag,
-    normalizzazione:flag==='0'&&esenzione?'Esenzione generale revisionata dalla fascia strutturata MEF.':null,
-    condizioniPersonali:speciale?'Non applicate: il profilo dichiarato non include agevolazioni personali o categoriali.':null,
+  const familiare=base.tipo!=='nessuna'&&revisionato.esenzioneFamiliare
+    ?{esenzioneFamiliare:revisionato.esenzioneFamiliare}:{};
+  return{...base,...familiare,casoMef:flag,
+    normalizzazione:revisionato.revisione
+      ||(flag==='0'&&esenzione?'Esenzione generale revisionata dalla fascia strutturata MEF.':null),
+    condizioniPersonali:revisionato.residuo
+      ||(revisionato.revisione?null
+        :(personali?'Non applicate: il profilo dichiarato non include agevolazioni personali o categoriali.':null)),
     fonte:fonteComune(r,anno,provisional)};
 }
 
-/* Revisione esplicita delle disposizioni regionali generali applicabili al
- * profilo. Le agevolazioni per figli/disabilita restano fuori, dichiarate nel
- * dataset: il prodotto assume nessun familiare e nessuna agevolazione personale. */
+/* Revisione esplicita delle disposizioni regionali applicabili al profilo,
+ * comprese quelle legate ai carichi di famiglia (issue #34). Tre forme, non una:
+ * una DETRAZIONE per figlio (Trento, Bolzano, Sardegna, Campania, Piemonte,
+ * Puglia), un'ALIQUOTA diversa (Marche, Veneto) e — nei comuni — un'ESENZIONE
+ * che sale col numero dei figli.
+ * Restano fuori, e sono dichiarate: la condizione sulla somma dei redditi dei
+ * due genitori (Marche, Veneto), la ripartizione a percentuale e mesi di carico
+ * del c. 3 e del c. 4 dell'art. 12, e l'agevolazione veneta al contribuente
+ * disabile in prima persona, che non e' un dato del nucleo. */
 const SPECIALI_REGIONALI={
   "Valle d'Aosta":{esenzioneFinoA:15000,revisione:'Esenzione generale fino a 15.000 euro.'},
   'Friuli-Venezia Giulia':{tipo:'aliquotePerReddito',fasce:[[15000,0.007],[null,0.0123]],revisione:'Aliquota sull’intero imponibile in base al reddito.'},
   'Umbria':{fasciaInteraFinoA:[28000,0.0123],detrazioni:[{oltre:28000,finoA:50000,fissa:150}],revisione:'Maggiorazioni escluse fino a 28.000 euro; detrazione generale di 150 euro tra 28.001 e 50.000.'},
   'Lazio':{fasciaInteraFinoA:[28000,0.0173],detrazioni:[{oltre:28000,finoA:30000,fissa:60}],revisione:'Aliquota 1,73% sull’intero imponibile fino a 28.000 euro; detrazione generale di 60 euro tra 28.001 e 30.000.'},
   'Trentino-Alto Adige/Südtirol':null,
-  'Provincia autonoma di Trento':{esenzioneFinoA:30000,revisione:'Deduzione generale pari all’imponibile fino a 30.000 euro, normalizzata come esenzione.'},
-  'Provincia autonoma di Bolzano/Bozen':{detrazioni:[{finoA:90000,fissa:430.5},{oltre:50000,finoA:75000,massimo:125,progressivaDa:50000,ampiezza:25000},{oltre:75000,fissa:125}],revisione:'Detrazioni generali MEF; escluse quelle per figli a carico.'}
+  'Provincia autonoma di Trento':{esenzioneFinoA:30000,
+    detrazioni:[{finoA:50000,perFiglio:{importo:246}}],
+    revisione:'Deduzione generale pari all’imponibile fino a 30.000 euro, normalizzata come esenzione; detrazione di 246 euro per ogni figlio a carico fino a 50.000 euro di imponibile.'},
+  'Provincia autonoma di Bolzano/Bozen':{detrazioni:[{finoA:90000,fissa:430.5},{oltre:50000,finoA:75000,massimo:125,progressivaDa:50000,ampiezza:25000},{oltre:75000,fissa:125},{finoA:90000,perFiglio:{importo:340}}],revisione:'Detrazioni generali MEF e detrazione di 340 euro per ogni figlio a carico, a qualunque età, fino a 90.000 euro di imponibile.'},
+  'Sardegna':{detrazioni:[{finoA:50000,perFiglio:{importo:200,supplementoDisabile:100,etaMassima:18,redditoMassimoFiglio:4000}}],revisione:'Detrazione di 200 euro per ogni figlio minorenne a carico con reddito fino a 4.000 euro, entro 50.000 euro di imponibile, aumentata di 100 euro per ogni figlio con disabilità.'},
+  'Campania':{detrazioni:[{finoA:28000,perFiglio:{importo:30,minimoFigli:2}},{finoA:28000,perFiglio:{importo:40,soloDisabili:true}}],revisione:'Entro 28.000 euro di imponibile: 30 euro per ogni figlio a carico da due figli in su, e 40 euro per ogni figlio a carico con disabilità.'},
+  'Piemonte':{detrazioni:[{perFiglio:{importo:100,minimoFigli:3,tettoTrentaAnni:true}},{perFiglio:{importo:500,soloDisabili:true,tettoTrentaAnni:true}}],revisione:'Senza tetto di reddito: 100 euro per ogni figlio a carico con più di due figli, e 500 euro per ogni figlio a carico con disabilità.'},
+  'Puglia':{detrazioni:[{perFiglio:{importo:20,minimoFigli:4,supplementoDisabile:375,tettoTrentaAnni:true}}],revisione:'Senza tetto di reddito: 20 euro per ogni figlio a carico con più di tre figli, aumentati di 375 euro per ogni figlio con disabilità.'},
+  'Marche':{aliquotaFamiliare:{aliquota:0.0123,finoA:50000,richiede:'figlioDisabile'},revisione:'Aliquota unica dell’1,23% sull’intero imponibile fino a 50.000 euro con almeno un figlio a carico con handicap ex art. 3 L. 104/1992.'},
+  'Veneto':{aliquotaFamiliare:{aliquota:0.009,finoA:50000,richiede:'familiareDisabile'},revisione:'Aliquota agevolata dello 0,9% fino a 50.000 euro di imponibile con un familiare con disabilità fiscalmente a carico.'}
 };
 const NOMI_REGIONALI={
   "REGIONE VALLE D'AOSTA":"Valle d'Aosta",'REGIONE UMBRIA':'Umbria',
@@ -198,7 +248,7 @@ function main(){
   }
   if(comuni.length!==7894)throw new Error(`Attesi 7.894 comuni Istat, trovati ${comuni.length}`);
   if(reg.length!==21)throw new Error(`Attese 21 giurisdizioni regionali, trovate ${reg.length}`);
-  const data={meta:{versione:'addizionali-2026-2026-08-26',asOf:AS_OF,
+  const data={meta:{versione:`addizionali-2026-${AS_OF}-r2`,asOf:AS_OF,revisione:REVISIONE,
     istat:{comuni:comuni.length,vigenteDal:'2026-02-21',url:URL_ISTAT},
     mef:{urlRegionale:URL_REG,urlComunale:URL_COM}},regioni:reg,province,comuni,regoleComunali:regole};
   const js='/* Generato da processo/attrezzi/importa-addizionali.js. Non modificare a mano. */\n'+

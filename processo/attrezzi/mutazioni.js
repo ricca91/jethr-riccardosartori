@@ -72,8 +72,8 @@ const MUTAZIONI=[
    prova:"l'ordine dell'array"},
 
   {voce:'addizionaleRegionale', rompe:'dovuta anche a IRPEF netta zero',
-   cerca:'return dovute?perScaglioni(imponibile,K.regionale.scaglioni):0n;',
-   con:'return perScaglioni(imponibile,K.regionale.scaglioni);',
+   cerca:':(dovute?perScaglioni(imponibile,K.regionale.scaglioni):0n);',
+   con:':(perScaglioni(imponibile,K.regionale.scaglioni));',
    prova:'addizionaleRegionale'},
 
   {voce:'addizionaleComunale', rompe:'esenzione secca → franchigia',
@@ -88,6 +88,21 @@ const MUTAZIONI=[
   {voce:'trattamentoIntegrativo', rompe:'1.200 → 1.300',
    cerca:"importo:dec('1200')", con:"importo:dec('1300')",
    prova:'trattamentoIntegrativo'},
+
+  {voce:'detrazioniCarichiFamiglia', rompe:'la disabilità non toglie più il tetto dei 30 anni',
+   cerca:"if(eta>=F.figlio.etaMassima&&!disabilita)return fuori('oltreTrentaAnni');",
+   con:"if(eta>=F.figlio.etaMassima)return fuori('oltreTrentaAnni');",
+   prova:'la disabilità toglie il tetto dei 30 anni'},
+
+  {voce:'detrazioniCarichiFamiglia', rompe:'la soglia sale per OGNI figlio, non solo per chi dà diritto',
+   cerca:'const oltreIlPrimo=Math.max(0,conDiritto-1);',
+   con:"const oltreIlPrimo=Math.max(0,nucleo.filter(f=>f.tipo==='figlio').length-1);",
+   prova:'non alza la soglia'},
+
+  {voce:'ripartisciCapienza', rompe:'chi non ha diritto riceve il resto dell\'arrotondamento',
+   cerca:'const ultimo=usi.reduce((scelto,_,i)=>spettanti[i]>0n?i:scelto,-1);',
+   con:'const ultimo=usi.length-1;',
+   prova:"resto dell'arrotondamento non atterra"},
 
   {voce:'riconcilia', rompe:"l'identità per tipo non si controlla più",
    cerca:'&&netto===daIdentita', con:'&&true',
@@ -138,12 +153,16 @@ function esegui(cartella){
 const decodifica=s=>s.replace(/&quot;/g,'"').replace(/&apos;/g,"'")
   .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
 
-const categoria=p=>(p.match(/^([A-D]) —/)||[])[1]||'?';
+const categoria=p=>(p.match(/^([A-E]) —/)||[])[1]||'?';
 const ultimo=p=>p.split(' › ').pop();
 
 /* ---------- la corsa ---------- */
 const lavoro=fs.mkdtempSync(path.join(os.tmpdir(),'mutazioni-'));
-for(const f of ['motore.js','motore.test.js'])
+/* Dalla #18 il motore carica la geografia, e dalla #34 la matrice di prova la
+ * carica a sua volta: la copia usa e getta deve portarsi dietro lo snapshot,
+ * altrimenti il file di prova non si carica nemmeno e OGNI mutazione sembra
+ * sfuggita — un attrezzo rotto che accusa le prove. */
+for(const f of ['motore.js','motore.test.js','geografia.js','dati-addizionali-2026.js'])
   fs.copyFileSync(path.join(PROTOTIPO,f),path.join(lavoro,f));
 const sorgente=fs.readFileSync(path.join(PROTOTIPO,'motore.js'),'utf8');
 
@@ -178,9 +197,11 @@ for(const m of MUTAZIONI){
     continue;
   }
 
-  const d=caduti.filter(p=>categoria(p)==='D');
-  const bersaglio=d.filter(p=>p.includes(m.prova));
-  const altre=d.filter(p=>!p.includes(m.prova));
+  /* D esercita le voci una alla volta, E fa lo stesso per i carichi di
+     famiglia: sono la stessa domanda su due sezioni. */
+  const perVoce=caduti.filter(p=>['D','E'].includes(categoria(p)));
+  const bersaglio=perVoce.filter(p=>p.includes(m.prova));
+  const altre=perVoce.filter(p=>!p.includes(m.prova));
   const colpita=bersaglio.length>0;
   if(!colpita)sfuggite++;
   console.log(`${colpita?'ROSSA':'SFUGGITA'}  ${m.voce} — ${m.rompe}`);

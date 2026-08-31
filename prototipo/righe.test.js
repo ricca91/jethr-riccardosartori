@@ -172,6 +172,22 @@ test.describe('carichi di famiglia — dalla Voce alla Riga',()=>{
     assert.deepEqual(note([{tipo:'coniuge'}]),['a carico entro 2.840,51 €']);
   });
 
+  /* Il figlio con disabilità oltre i 30 anni ha diritto alla stessa
+     detrazione, e la Riga deve dire perché — altrimenti la pagina
+     mostra 632,13 € accanto a «30 anni compiuti: non spetta più». */
+  test('la disabilità cambia il racconto, non l\'importo',()=>{
+    const righe=righeDi('35000',[{tipo:'figlio',eta:35,disabilita:true}]);
+    assert.equal(righe[0].nota,'30 anni e oltre, disabilità accertata, a carico entro 2.840,51 €');
+    assert.match(righe[0].titolo,/disabilità/);
+    assert.equal(calcola('35000',{nucleo:[{tipo:'figlio',eta:35,disabilita:true}]})
+      .voci.find(v=>v.id==='detrfam1').importo,632.13);
+  });
+
+  test('sotto i 30 anni la disabilità non cambia la nota',()=>{
+    assert.deepEqual(righeDi('35000',[{tipo:'figlio',eta:22,disabilita:true}]).map(r=>r.nota),
+      ['21–29 anni, a carico entro 4.000 €']);
+  });
+
   test('ogni familiare rimanda alla sua lettera dell\'art. 12',()=>{
     assert.deepEqual(righeDi('35000',NUCLEO).map(r=>r.fonte.titolo),[
       'TUIR, art. 12 c. 1 lett. a','TUIR, art. 12 c. 1 lett. c','TUIR, art. 12 c. 1 lett. d']);
