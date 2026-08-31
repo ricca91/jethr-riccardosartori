@@ -21,6 +21,8 @@ del 21 febbraio 2026.
 | `motore.test.js` | la matrice di prova |
 | `righe.js` | l'adapter che trasforma ogni Voce in una Riga |
 | `righe.test.js` | le prove della seam Voce → Riga |
+| `sezioni.js` | i riepiloghi delle due sezioni facoltative del modulo, e quali partono aperte |
+| `sezioni.test.js` | le prove di quei riepiloghi |
 | `fonti.js` | il catalogo delle fonti normative usato da pagina e adapter |
 | `geografia.js` | la piccola interface per elenchi dipendenti e risoluzione per codice catastale |
 | `dati-addizionali-2026.js` | lo snapshot runtime generato da Istat e MEF |
@@ -29,8 +31,8 @@ del 21 febbraio 2026.
 
 ## Come si apre
 
-Doppio clic su `index.html`, tenendo `draftsman.css`, `motore.js`, `righe.js` e `fonti.js`
-nella stessa cartella. Nessuna dipendenza, nessun passo di build, nessuna richiesta di rete:
+Doppio clic su `index.html`, tenendo `draftsman.css`, `motore.js`, `righe.js`, `sezioni.js`
+e `fonti.js` nella stessa cartella. Nessuna dipendenza, nessun passo di build, nessuna richiesta di rete:
 Archivo, Instrument Sans e JetBrains Mono sono incorporati in `draftsman.css`, quindi le
 pagine funzionano anche offline.
 

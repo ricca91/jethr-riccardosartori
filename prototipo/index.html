@@ -100,6 +100,35 @@ body{padding-bottom:0}
   .nucleo-tab .select{width:auto;min-width:190px}
 }
 
+/* --- le due sezioni facoltative, progressive ------------------------------
+   Nucleo e pacchetto sono l'eccezione, non la regola: da chiusi valgono una
+   riga con il proprio riepilogo, da aperti restano esattamente il modulo di
+   prima. La grammatica e' quella dell'accordion Draftsman, con una testata a
+   griglia perche' il riepilogo deve poter scendere sotto il titolo su mobile
+   invece di stringere il titolo stesso. */
+.opt{margin-top:var(--s-6)}
+.opt .acc-trigger{display:grid;grid-template-columns:minmax(0,1fr) auto auto;
+  gap:var(--s-3) var(--s-4);align-items:center;padding:var(--s-5) 0}
+.opt-h{margin:0;font:inherit}
+.opt-titolo{display:grid;gap:5px;min-width:0}
+.opt-nome{display:flex;align-items:center;gap:var(--s-3);flex-wrap:wrap}
+.opt .tag{font-stretch:normal}
+.opt-sub{font:400 var(--t-xs)/1.4 var(--font-mono);font-stretch:normal;letter-spacing:0;
+  color:var(--fg-muted);text-transform:none}
+.opt-riep{display:flex;align-items:center;gap:var(--s-2);flex-wrap:wrap;justify-content:flex-end}
+/* Il pannello ospita un modulo intero, non una nota: annulla la misura
+   stretta e il grigio che l'accordion del sistema usa per il testo. */
+.opt-panel{padding:0 0 var(--s-6);max-width:none;color:inherit;font-size:inherit}
+.opt-panel .nucleo{margin-top:0;padding-top:0;border-top:0}
+@media(max-width:640px){
+  /* Il riepilogo scende sotto il titolo, ma il segno resta accanto al titolo:
+     e' il comando, e in fondo alla colonna non si capirebbe cosa apre. */
+  .opt .acc-trigger{grid-template-columns:minmax(0,1fr) auto}
+  .opt-titolo{grid-area:1/1}
+  .opt .sign{grid-area:1/2;align-self:center}
+  .opt-riep{grid-area:2/1/auto/-1;justify-content:flex-start}
+}
+
 /* --- sezioni impilate ---------------------------------------------------- */
 .sec{position:relative;scroll-margin-top:96px;padding:clamp(44px,6vw,84px) 0;
   border-bottom:var(--bw) dashed var(--line-strong)}
@@ -276,6 +305,7 @@ body{padding-bottom:0}
 <script src="motore.js"></script>
 <script src="fonti.js"></script>
 <script src="righe.js"></script>
+<script src="sezioni.js"></script>
 <script>
 
 
@@ -297,8 +327,13 @@ const FAQ=[
   ['Perché a volte un euro lordo in più fa <em>scendere</em> il netto?',stato=>{
     const geo=GEOGRAFIA_ITALIA.risolvi(stato.comune);
     const numero=raw=>Number(parseRal(raw)||0);
+    /* Questa risposta illustra una soglia mentre l'utente sta ancora
+       digitando: un numero di buoni a meta' («2,5») non deve far esplodere
+       il motore e con lui tutto il rerender. Il valore non valido lo segnala
+       commit(), qui vale zero. */
+    const conta=raw=>{const n=Number(raw||0);return Number.isInteger(n)&&n>=0?n:0;};
     const benefit={fringe:numero(stato.fringeRaw),buoniPasto:{tipo:stato.buoniTipo,
-      valoreUnitario:numero(stato.buoniValoreRaw),numero:Number(stato.buoniNumeroRaw||0)}};
+      valoreUnitario:numero(stato.buoniValoreRaw),numero:conta(stato.buoniNumeroRaw)}};
     const comunali=nucleo=>soglie({comune:stato.comune,nucleo,...benefit}).filter(s=>s.ambito==='comunale');
     const locali=comunali(stato.nucleo);
     if(!locali.length){
@@ -404,11 +439,17 @@ const NUCLEO_PERIMETRO=`<b>Fuori perimetro, dichiarato.</b> Non è calcolato il 
   Le <b>regole locali</b> che guardano i figli guardano qui il solo reddito del dichiarante,
   non quello della famiglia, e restano fuori le esenzioni comunali legate all’<b>ISEE</b>.`;
 
+/* I numeri del nucleo si mostrano solo se il risultato a schermo è stato
+   calcolato per QUESTO nucleo: altrimenti la tabella direbbe una cifra e la
+   catena un'altra, e il riepilogo della sezione chiusa resterebbe indietro
+   di una modifica. */
+const combaciaNucleo=stato=>!!stato.res&&serializzaNucleo(stato.nucleo)===stato.nucleoCalcolato;
+const detrazioneNucleo=stato=>combaciaNucleo(stato)
+  ?stato.res.voci.filter(v=>/^detrfam\d+$/.test(v.id)).reduce((t,v)=>t+v.importo,0)
+  :null;
+
 function nucleoBlocco(stato){
-  /* I numeri si mostrano solo se il risultato a schermo è stato
-     calcolato per QUESTO nucleo: altrimenti la tabella direbbe una
-     cifra e la catena un'altra. */
-  const combacia=stato.res&&serializzaNucleo(stato.nucleo)===stato.nucleoCalcolato;
+  const combacia=combaciaNucleo(stato);
   const voci=combacia?stato.res.voci.filter(v=>/^detrfam\d+$/.test(v.id)):[];
   const righe=combacia?componiRighe(stato.res.voci).filter(r=>/^detrfam\d+$/.test(r.id)):[];
   const cella=(f,i)=>{
@@ -443,10 +484,6 @@ function nucleoBlocco(stato){
     </tr>`;
   };
   return `<div class="nucleo">
-    <div class="nucleo-head">
-      <span class="label">Nucleo familiare</span>
-      <span class="xs muted">Facoltativo — abbatte l’IRPEF, non i contributi</span>
-    </div>
     ${stato.nucleo.length?`<div class="table-wrap"><table class="table nucleo-tab">
       <caption class="sr">Familiari a carico dichiarati</caption>
       <thead><tr><th>Familiare</th><th>Età</th><th>Suo reddito</th><th>Disabilità</th>
@@ -471,7 +508,6 @@ function benefitBlocco(stato){
     <input class="input" id="${id}" inputmode="decimal" autocomplete="off" value="${esc(value)}" placeholder="0"></div>
     <p class="hint">${help}</p></div>`;
   return `<div class="nucleo-box">
-    <div class="section-label"><span>Pacchetto retributivo</span><i></i></div>
     <div class="benefit-grid">
       ${denaro('welfare','Welfare aziendale annuo',stato.welfareRaw,
         'Valore già qualificato come esente: non entra nel denaro in busta.')}
@@ -496,8 +532,33 @@ function benefitBlocco(stato){
   </div>`;
 }
 
+/* Una sezione facoltativa: un vero button che apre e chiude il proprio
+   pannello, il riepilogo mostrato solo da chiusa — da aperta lo dice il
+   contenuto — e dentro, intatto, il modulo di sempre. Aprire e chiudere non
+   tocca un solo dato: lo stato vive in st.sezioni e non entra nell'URL. */
+function sezioneOpzionale({chiave,titolo,sotto,riepilogo,configurata,aperta,corpo}){
+  const tid=`opt-t-${chiave}`,pid=`opt-p-${chiave}`;
+  const chip=(testo,i)=>`<span class="tag${i===0&&configurata?' tag--flux':''}">${esc(testo)}</span>`;
+  return `<div class="acc-item opt-item">
+    <h3 class="opt-h"><button type="button" class="acc-trigger" id="${tid}"
+      data-opt="${chiave}" aria-expanded="${aperta}" aria-controls="${pid}">
+      <span class="opt-titolo">
+        <span class="opt-nome">${esc(titolo)} <span class="tag">Facoltativo</span></span>
+        <span class="opt-sub">${esc(sotto)}</span>
+      </span>
+      ${aperta?'':`<span class="opt-riep">${riepilogo.map(chip).join('')}</span>`}
+      <span class="sign" aria-hidden="true">+</span>
+    </button></h3>
+    <div class="acc-panel opt-panel" id="${pid}" role="region" aria-labelledby="${tid}"
+      ${aperta?'':'hidden'}>${corpo}</div>
+  </div>`;
+}
+
 function form(st){
   const err=st.errore?`<p class="error-text" role="alert">${esc(st.errore)}</p>`:'';
+  /* «Ha dei dati dentro» e «deve partire aperta» sono la stessa domanda:
+     una sola risposta, usata per accendere il riepilogo e per lo stato iniziale. */
+  const configurate=sezioniAperte(st);
   const province=GEOGRAFIA_ITALIA.province(st.regione),comuni=GEOGRAFIA_ITALIA.comuni(st.provincia);
   const opts=(xs,value,label)=>xs.map(x=>{const v=Object.hasOwn(x,'catastale')?x.catastale:x.id;
     return`<option value="${v}" ${v==value?'selected':''}>${esc(label(x))}</option>`;}).join('');
@@ -530,10 +591,17 @@ function form(st){
       <div class="field"><label class="label" for="comune">Comune</label>
         <select class="select" id="comune">${opts(comuni,st.comune,x=>x.nome)}</select></div>
     </div>
-    ${nucleoBlocco(st)}
-    ${benefitBlocco(st)}
-    <hr class="rule" style="margin:26px 0">
-    <div class="calcrow">
+    <div class="accordion opt">
+      ${sezioneOpzionale({chiave:'nucleo',titolo:'Nucleo familiare',
+        sotto:'Familiari a carico — abbattono l’IRPEF, non i contributi',
+        riepilogo:riepilogoNucleo({...st,detrazione:detrazioneNucleo(st)}),
+        configurata:configurate.nucleo,aperta:st.sezioni.nucleo,corpo:nucleoBlocco(st)})}
+      ${sezioneOpzionale({chiave:'pacchetto',titolo:'Pacchetto retributivo',
+        sotto:'Welfare, fringe benefit e buoni pasto',
+        riepilogo:riepilogoPacchetto(st),
+        configurata:configurate.pacchetto,aperta:st.sezioni.pacchetto,corpo:benefitBlocco(st)})}
+    </div>
+    <div class="calcrow" style="margin-top:26px">
       <button class="btn btn--primary btn--lg" id="go">Calcola</button>
       <span class="dirty"><span class="dot" style="color:var(--c-amber)"></span>
         Dati cambiati: premi <b>Calcola</b> per aggiornare.</span>
@@ -881,6 +949,9 @@ const st={ralRaw:'35.000',mensilita:13,regione:GEO_DEFAULT.provincia.regione,
   provincia:GEO_DEFAULT.comune.provincia,comune:GEO_DEFAULT.comune.catastale,
   nucleo:[],nucleoCalcolato:null,
   welfareRaw:'',fringeRaw:'',buoniTipo:'elettronici',buoniValoreRaw:'',buoniNumeroRaw:'',
+  /* Aperto/chiuso delle due sezioni facoltative: vive qui e non nell'URL,
+     perché è una preferenza di lettura, non un dato del calcolo. */
+  sezioni:{nucleo:false,pacchetto:false},
   aperta:null,attiva:'risultato',res:null,errore:null,dirty:false,eggPending:false};
 
 function fromURL(){
@@ -896,6 +967,9 @@ function fromURL(){
   if(p.has('bn'))st.buoniNumeroRaw=p.get('bn');
   const mensilita=Number(p.get('m'));
   if(MENSILITA_AMMESSE.includes(mensilita))st.mensilita=mensilita;
+  /* Un link che porta dei dati non deve nasconderli: la sezione che li
+     contiene si apre da sola, quella vuota resta chiusa. */
+  st.sezioni=sezioniAperte(st);
   if(p.get('calc')==='1')commit(true);
 }
 function toURL(){
@@ -927,10 +1001,14 @@ function commit(silenzioso){
   if(v===null){st.errore='Inserisci la RAL per calcolare.';st.res=null;}
   else if(Number.isNaN(v)){st.errore='Solo cifre: usa la virgola per i decimali, per esempio 35.000,50.';st.res=null;}
   else if(Number(v)<0){st.errore='La RAL non può essere negativa.';st.res=null;}
+  /* Un errore che parla di un campo chiuso dentro un pannello non si puo'
+     correggere: se l'errore e' li' dentro, la sezione si apre da sola. */
   else if([welfare,fringe,valoreBuono].some(x=>Number.isNaN(x)||Number(x)<0)){
-    st.errore='Welfare, fringe benefit e valore dei buoni devono essere importi positivi.';st.res=null;}
+    st.errore='Welfare, fringe benefit e valore dei buoni devono essere importi positivi.';
+    st.res=null;st.sezioni.pacchetto=true;}
   else if(!Number.isInteger(numeroBuoni)||numeroBuoni<0){
-    st.errore='Il numero annuo di buoni pasto deve essere un numero intero positivo.';st.res=null;}
+    st.errore='Il numero annuo di buoni pasto deve essere un numero intero positivo.';
+    st.res=null;st.sezioni.pacchetto=true;}
   else if(Number(v)===4700000){st.res=null;st.dirty=false;st.eggPending=true;}
   else if(Number(v)>1000000){st.errore='Il calcolo è disponibile fino a una RAL di 1.000.000 €.';st.res=null;}
   else{st.res=applicaMensilita(calcola(v,{comune:st.comune,nucleo:st.nucleo,
@@ -1055,11 +1133,17 @@ document.addEventListener('click',e=>{
     document.getElementById(a.dataset.anchor)?.scrollIntoView({
       behavior:matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth',block:'start'});
     return;}
+  const opt=e.target.closest('[data-opt]');
+  if(opt){
+    st.sezioni[opt.dataset.opt]=!st.sezioni[opt.dataset.opt];
+    return render(true);   // nessun dato cambia: solo cosa si vede
+  }
   const familiare=e.target.closest('#nucleo-aggiungi,[data-nucleo-rimuovi]');
   if(familiare){
     if(familiare.id==='nucleo-aggiungi'){
       if(st.nucleo.length>=MAX_FAMILIARI)return;
       st.nucleo.push({tipo:'figlio',eta:null,disabilita:false,reddito:0});
+      st.sezioni.nucleo=true;   // si sta compilando: non richiudersi addosso
     }else st.nucleo.splice(Number(familiare.dataset.nucleoRimuovi),1);
     if(st.res)st.dirty=true;
     return render(true);
@@ -1069,7 +1153,8 @@ document.addEventListener('click',e=>{
   if(t.id==='go')return commit();
   if(t.id==='reset'){st.res=null;st.ralRaw='';st.aperta=null;st.errore=null;
     st.nucleo=[];st.nucleoCalcolato=null;st.welfareRaw='';st.fringeRaw='';
-    st.buoniTipo='elettronici';st.buoniValoreRaw='';st.buoniNumeroRaw='';return render();}
+    st.buoniTipo='elettronici';st.buoniValoreRaw='';st.buoniNumeroRaw='';
+    st.sezioni={nucleo:false,pacchetto:false};return render();}
   if(t.hasAttribute('data-m')){
     st.mensilita=Number(t.dataset.m);
     // Mensilita' e' presentazione, non calcolo: si divide il netto annuo
