@@ -68,8 +68,20 @@ body{padding-bottom:0}
 .nucleo-dis{width:78px;text-align:center}
 .nucleo-imp{white-space:nowrap;font-weight:600}
 .nucleo-perche{font-size:var(--t-xs);color:var(--fg-muted);max-width:36ch}
-.benefit-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-5)}
-.benefit-subgrid{display:grid;grid-template-columns:1fr 1fr;gap:var(--s-3)}
+/* Welfare e fringe sono la stessa cosa — un importo annuo — e stanno
+   affiancati. I buoni pasto no: sono un calcolo (tipo × valore × numero), e
+   in un terzo di colonna finivano schiacciati accanto a due campi con un solo
+   input. Prendono una riga propria. `align-items:start` è quello che tiene i
+   campi alla loro altezza naturale: .field è un grid, e stirato all'altezza
+   della colonna più alta gonfiava l'input € a 77px contro i 46 di tutti gli
+   altri campi del modulo. */
+.benefit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s-5);
+  align-items:start}
+.buoni{margin-top:var(--s-6);padding-top:var(--s-5);
+  border-top:var(--bw) dashed var(--line)}
+.buoni-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s-4);
+  align-items:start;margin-top:var(--s-3)}
+.buoni .hint{margin-top:var(--s-3)}
 .nucleo-x{border:0;background:none;cursor:pointer;font:400 var(--t-sm)/1 var(--font-mono);
   color:var(--fg-muted);padding:8px 10px}
 .nucleo-x:hover{background:var(--c-signal-red);color:var(--c-graphite)}
@@ -97,6 +109,10 @@ body{padding-bottom:0}
   .nucleo-eta,.nucleo-red{width:130px}
   .nucleo-dis{width:auto;text-align:left}
   .benefit-grid{grid-template-columns:1fr}
+  /* Il tipo prende tutta la riga, valore e numero si dividono quella sotto:
+     sono due numeri corti, impilarli sprecherebbe due schermate. */
+  .buoni-grid{grid-template-columns:1fr 1fr}
+  .buoni-grid>:first-child{grid-column:1/-1}
   .nucleo-tab .select{width:auto;min-width:190px}
 }
 
@@ -513,18 +529,25 @@ function benefitBlocco(stato){
         'Valore già qualificato come esente: non entra nel denaro in busta.')}
       ${denaro('fringe','Fringe benefit annui',stato.fringeRaw,
         'Oltre la soglia applicabile, l’intero valore diventa imponibile.')}
-      <div class="field"><label class="label" for="buoni-tipo">Buoni pasto</label>
-        <select class="select" id="buoni-tipo">
-          <option value="elettronici" ${stato.buoniTipo==='elettronici'?'selected':''}>Elettronici</option>
-          <option value="cartacei" ${stato.buoniTipo==='cartacei'?'selected':''}>Cartacei</option>
-        </select>
-        <div class="benefit-subgrid" style="margin-top:var(--s-3)">
-          <div><label class="xs mono" for="buoni-valore">Valore unitario (€)</label>
-            <input class="input" id="buoni-valore" inputmode="decimal" value="${esc(stato.buoniValoreRaw)}" placeholder="0"></div>
-          <div><label class="xs mono" for="buoni-numero">Numero annuo</label>
-            <input class="input" id="buoni-numero" inputmode="numeric" value="${esc(stato.buoniNumeroRaw)}" placeholder="0"></div>
-        </div>
-        <p class="hint">Esenti fino a 8 € elettronici o 4 € cartacei per buono.</p></div>
+    </div>
+    <!-- «Buoni pasto» nomina il gruppo, non un singolo campo: è un role=group
+         con tre controlli etichettati, non una label che punta alla select. -->
+    <div class="buoni" role="group" aria-labelledby="buoni-lab">
+      <span class="label" id="buoni-lab">Buoni pasto</span>
+      <div class="buoni-grid">
+        <div class="field"><label class="xs mono" for="buoni-tipo">Tipo</label>
+          <select class="select" id="buoni-tipo">
+            <option value="elettronici" ${stato.buoniTipo==='elettronici'?'selected':''}>Elettronici</option>
+            <option value="cartacei" ${stato.buoniTipo==='cartacei'?'selected':''}>Cartacei</option>
+          </select></div>
+        <div class="field"><label class="xs mono" for="buoni-valore">Valore unitario (€)</label>
+          <input class="input" id="buoni-valore" inputmode="decimal" autocomplete="off"
+            value="${esc(stato.buoniValoreRaw)}" placeholder="0"></div>
+        <div class="field"><label class="xs mono" for="buoni-numero">Numero annuo</label>
+          <input class="input" id="buoni-numero" inputmode="numeric" autocomplete="off"
+            value="${esc(stato.buoniNumeroRaw)}" placeholder="0"></div>
+      </div>
+      <p class="hint">Esenti fino a 8 € elettronici o 4 € cartacei per buono.</p>
     </div>
     <div class="callout callout--warn nucleo-nota"><span class="callout__mark">Limite</span><div>
       Il welfare è inserito come valore <b>già qualificato come esente</b>: il calcolatore non verifica
