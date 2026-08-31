@@ -164,6 +164,23 @@ La conseguenza pratica è che il flag serviva comunque: cinque delle otto region
 aliquote agevolate lo guardano. Senza, metà del lavoro sulle regole locali sarebbe stato
 irraggiungibile dalla pagina.
 
+## Il pacchetto non è una RAL più larga (#26)
+
+La RAL resta la componente monetaria. Welfare, fringe benefit e buoni pasto formano una
+seconda somma, `benefitSpendibili`: il loro valore nominale non viene spacciato per denaro in
+busta. Le sole quote imponibili si aggiungono alle basi previdenziale e fiscale e le relative
+trattenute riducono il netto monetario. Il risultato espone quindi due identità: `nettoInBusta`
+e `valorePacchetto = nettoInBusta + benefitSpendibili`.
+
+`welfare` non prova l'esenzione. Un unico importo non porta categoria, destinatari e condizioni
+del piano richieste dalle diverse lettere dell'art. 51: il prodotto lo nomina e lo presenta come
+valore **già qualificato esente**. È un'assunzione dichiarata, non una verifica fiscale.
+
+Il fringe usa una soglia secca: 1.000 €, oppure 2.000 € quando il nucleo dichiarato contiene
+almeno un figlio fiscalmente a carico. I buoni usano invece una franchigia per titolo, 4 €
+cartaceo e 8 € elettronico. Questa differenza resta visibile nelle Voce e nelle Riga, non solo
+nel totale.
+
 ## Se un link di un ticket non porta da nessuna parte
 
 I ticket sono stati scritti mentre il lavoro procedeva, quindi citano la repo **com'era in quel

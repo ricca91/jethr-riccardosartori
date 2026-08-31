@@ -103,12 +103,23 @@ const K={
       importo:dec('750'), soglia:dec('80000'),
     },
   },
+  benefit:{                               // Regole 2026, TUIR art. 51
+    fringe:{
+      sogliaOrdinaria:dec('1000'),        // L. 207/2024, art. 1 c. 390
+      sogliaConFigli:dec('2000'),         // L. 207/2024, art. 1 c. 391
+    },
+    buoniPasto:{                          // TUIR, art. 51 c. 2 lett. c
+      cartacei:dec('4'),
+      elettronici:dec('8'),
+    },
+  },
 };
 
-/* L'unica somma che oggi esiste. Il costo azienda ne sarà una
-   seconda: la guardia di riconciliazione ne verifica una alla volta. */
+/* Il denaro in busta e i benefit spendibili sono somme diverse:
+   la guardia di riconciliazione ne considera una alla volta. */
 const NETTO_LAVORATORE='nettoLavoratore';
-const SOMME=[NETTO_LAVORATORE];
+const BENEFIT_SPENDIBILI='benefitSpendibili';
+const SOMME=[NETTO_LAVORATORE,BENEFIT_SPENDIBILI];
 
 /* ============================================================
    LE VOCI, UNA FUNZIONE PER CIASCUNA
@@ -535,7 +546,10 @@ function trattamentoIntegrativo(imponibile,lorda,detrazione){
    dice che i conti tornano, non che le aliquote sono giuste.
    Verifica UNA somma alla volta, non «tutto»: filtra le voci che
    entrano nell'identità chiesta e ricostruisce il netto da lì. */
-const TIPI_DELL_IDENTITA=['contributo','imposta','detrazione','integrazione'];
+const TIPI_PER_SOMMA={
+  [NETTO_LAVORATORE]:['contributo','imposta','detrazione','integrazione'],
+  [BENEFIT_SPENDIBILI]:['benefit'],
+};
 function riconcilia(ral,voci,somma=NETTO_LAVORATORE){
   const della=voci.filter(v=>v.somma===somma);
   const netto=della.reduce((a,v)=>a+v._i,ral);
@@ -546,7 +560,7 @@ function riconcilia(ral,voci,somma=NETTO_LAVORATORE){
      Le voci di un'ALTRA somma non entrano qui, nemmeno se sono
      malformate: la riconciliazione ne verifica una alla volta. */
   const perTipo=t=>della.filter(v=>v.tipo===t).reduce((a,v)=>a+v._i,0n);
-  const daIdentita=TIPI_DELL_IDENTITA.reduce((a,t)=>a+perTipo(t),ral);
+  const daIdentita=TIPI_PER_SOMMA[somma].reduce((a,t)=>a+perTipo(t),ral);
   return{netto,quante:della.length,
     verificata:della.length>0&&netto===daIdentita};
 }
@@ -557,6 +571,47 @@ function riconcilia(ral,voci,somma=NETTO_LAVORATORE){
    questo sta fuori da riconcilia(), che di somme ne guarda una. */
 const sommeDichiarate=voci=>voci.every(v=>SOMME.includes(v.somma));
 
+/* BENEFIT — il valore nominale è spendibile ma non è denaro in
+   busta. Le sole quote imponibili si sommano alla base previdenziale
+   e fiscale; il superamento della soglia fringe rende imponibile
+   l'intero valore, mentre i buoni tassano soltanto l'eccedenza per
+   singolo titolo. `welfare` è dichiarato dall'utente già qualificato
+   come esente: il motore non può ricostruire il piano aziendale. */
+const BENEFIT_DEFAULT=Object.freeze({tipo:'elettronici',valoreUnitario:0,numero:0});
+function importoBenefit(nome,valore){
+  const n=Number(valore??0);
+  if(!Number.isFinite(n)||n<0)throw new RangeError(`${nome} non valido: ${valore}`);
+  return arrotondaCentesimi(dec(String(n)));
+}
+function valutaBenefit(opzioni,nucleo){
+  verificaNucleo(nucleo);
+  const welfare=importoBenefit('Welfare',opzioni.welfare);
+  const fringe=importoBenefit('Fringe benefit',opzioni.fringe);
+  const figlioACarico=nucleo.some(f=>f.tipo==='figlio'&&
+    dec(String(f.reddito??0))<=limiteRedditoFamiliare('figlio',f.eta));
+  const sogliaFringe=figlioACarico
+    ?K.benefit.fringe.sogliaConFigli:K.benefit.fringe.sogliaOrdinaria;
+  const fringeImponibile=fringe>sogliaFringe?fringe:0n;
+
+  const buoni={...BENEFIT_DEFAULT,...(opzioni.buoniPasto||{})};
+  if(!Object.hasOwn(K.benefit.buoniPasto,buoni.tipo))
+    throw new RangeError(`Tipo di buoni pasto non valido: ${buoni.tipo}`);
+  const valoreUnitario=importoBenefit('Valore unitario buoni pasto',buoni.valoreUnitario);
+  if(!Number.isInteger(Number(buoni.numero))||Number(buoni.numero)<0)
+    throw new RangeError(`Numero di buoni pasto non valido: ${buoni.numero}`);
+  const numero=BigInt(Number(buoni.numero));
+  const sogliaUnitaria=K.benefit.buoniPasto[buoni.tipo];
+  const valoreBuoni=valoreUnitario*numero;
+  const esenteUnitario=min(valoreUnitario,sogliaUnitaria);
+  const quotaEsenteBuoni=esenteUnitario*numero;
+  const quotaImponibileBuoni=valoreBuoni-quotaEsenteBuoni;
+  return{welfare,fringe,sogliaFringe,fringeImponibile,figlioACarico,
+    buoni:{tipo:buoni.tipo,valoreUnitario,numero:Number(numero),sogliaUnitaria,
+      valore:valoreBuoni,quotaEsente:quotaEsenteBuoni,quotaImponibile:quotaImponibileBuoni},
+    imponibile:fringeImponibile+quotaImponibileBuoni,
+    spendibile:welfare+fringe+valoreBuoni};
+}
+
 /* ============================================================
    LA SEQUENZA — l'ordine dei passi è vincolante, quindi l'ordine
    È il codice: si legge dall'alto in basso e nessuno può
@@ -565,27 +620,42 @@ const sommeDichiarate=voci=>voci.every(v=>SOMME.includes(v.somma));
 function calcola(ralInput,opzioni={}){
   const geo=GEOGRAFIA.risolvi(opzioni.comune||'F205');
   const RAL=arrotondaCentesimi(dec(ralInput));
+  const nucleo=opzioni.nucleo||[];
+  const benefit=valutaBenefit(opzioni,nucleo);
+  const BASE_PREVIDENZIALE=RAL+benefit.imponibile;
   const voci=[];
   const serializza=v=>typeof v==='bigint'?toNumber(v)
     :Array.isArray(v)?v.map(serializza)
     :v&&typeof v==='object'?Object.fromEntries(Object.entries(v).map(([k,x])=>[k,serializza(x)]))
     :v;
-  const emetti=(id,tipo,fonte,base,importo,dettagli={})=>{
+  const emetti=(id,tipo,fonte,base,importo,dettagli={},somma=NETTO_LAVORATORE)=>{
     const i=arrotondaCentesimi(importo);
-    voci.push({id,tipo,somma:NETTO_LAVORATORE,base:toNumber(base),
+    voci.push({id,tipo,somma,base:toNumber(base),
       importo:toNumber(i),fonte,...serializza(dettagli),
       _i:i});
   };
 
+  if(benefit.welfare>0n)emetti('welfare','benefit','tuir51welfare',benefit.welfare,benefit.welfare,
+    {quotaEsente:benefit.welfare,quotaImponibile:0n},BENEFIT_SPENDIBILI);
+  if(benefit.fringe>0n)emetti('fringe','benefit','l207fringe',benefit.fringe,benefit.fringe,
+    {soglia:benefit.sogliaFringe,figlioACarico:benefit.figlioACarico,
+      quotaEsente:benefit.fringeImponibile===0n?benefit.fringe:0n,
+      quotaImponibile:benefit.fringeImponibile},BENEFIT_SPENDIBILI);
+  if(benefit.buoni.valore>0n)emetti('buoni','benefit','tuir51buoni',benefit.buoni.valore,
+    benefit.buoni.valore,{tipoBuoni:benefit.buoni.tipo,
+      valoreUnitario:benefit.buoni.valoreUnitario,numero:benefit.buoni.numero,
+      sogliaUnitaria:benefit.buoni.sogliaUnitaria,quotaEsente:benefit.buoni.quotaEsente,
+      quotaImponibile:benefit.buoni.quotaImponibile},BENEFIT_SPENDIBILI);
+
   /* 1-2. dalla RAL all'imponibile */
-  const ivs=contributiIvs(RAL);
+  const ivs=contributiIvs(BASE_PREVIDENZIALE);
   emetti('ivs','contributo','inps101',ivs.base,-ivs.importo,{aliquota:ivs.aliquota});
-  const agg=contributoAggiuntivo(RAL);
+  const agg=contributoAggiuntivo(BASE_PREVIDENZIALE);
   if(agg.importo>0n)
     emetti('ecc','contributo','inps6',agg.eccedenza,-agg.importo,
       {baseContributiva:agg.base,soglia:agg.soglia,aliquota:agg.aliquota});
-  const contributiTotali=contributi(RAL);
-  const I=imponibile(RAL);
+  const contributiTotali=contributi(BASE_PREVIDENZIALE);
+  const I=imponibile(BASE_PREVIDENZIALE);
 
   /* 3. IRPEF lorda */
   const lorda=irpefLorda(I);
@@ -600,7 +670,7 @@ function calcola(ralInput,opzioni={}){
 
   /* 6-bis. i carichi di famiglia consumano quel che resta
      dell'imposta dopo l'art. 13: stessa capienza, un blocco solo. */
-  const famiglia=detrazioniCarichiFamiglia(I,opzioni.nucleo||[]);
+  const famiglia=detrazioniCarichiFamiglia(I,nucleo);
   const spettantiFamiglia=famiglia.map(f=>arrotondaCentesimi(f.spettante));
   const ripartizione=ripartisciCapienza(spettantiFamiglia,capienza.residua);
   const netta=ripartizione.residua;
@@ -635,7 +705,6 @@ function calcola(ralInput,opzioni={}){
      giurisdizioni e sei comuni lo guardano, e senza passarglielo
      l'addizionale di quegli enti sarebbe incompleta in silenzio. */
   const dovute=netta>0n;
-  const nucleo=opzioni.nucleo||[];
   const reg=addizionaleRegionale(I,dovute,geo.regionale,nucleo);
   const com=addizionaleComunale(I,dovute,geo.comunale,nucleo);
   emetti('addreg','imposta',{tipo:'regionale',...geo.regionale.fonte},I,-reg,
@@ -655,18 +724,26 @@ function calcola(ralInput,opzioni={}){
 
   /* 11. la guardia */
   const conti=riconcilia(RAL,voci);
+  const contiBenefit=riconcilia(0n,voci,BENEFIT_SPENDIBILI);
   const netto=conti.netto;
   const imposte=arrotondaCentesimi(netta)+arrotondaCentesimi(reg)+arrotondaCentesimi(com);
-  return{input:{ral:toNumber(RAL),comune:geo.comune.catastale},versioneRegole:'regole-2026-v3',
+  const spendibili=arrotondaCentesimi(benefit.spendibile);
+  const valorePacchetto=netto+spendibili;
+  const mediaMensileBuoni=arrotondaCentesimi(div(benefit.buoni.valore,dec('12')));
+  return{input:{ral:toNumber(RAL),comune:geo.comune.catastale},versioneRegole:'regole-2026-v4',
     geografia:{regione:geo.regione.nome,provincia:geo.provincia.nome,comune:geo.comune.nome,
       catastale:geo.comune.catastale,asOf:geo.meta.asOf},
     voci:voci.map(({_i,...r})=>r),
-    kpi:{nettoAnnuo:toNumber(netto),totaleImposte:toNumber(imposte),
+    kpi:{nettoAnnuo:toNumber(netto),nettoInBusta:toNumber(netto),
+      benefitSpendibili:toNumber(spendibili),valorePacchetto:toNumber(valorePacchetto),
+      mediaMensileBuoni:toNumber(mediaMensileBuoni),totaleImposte:toNumber(imposte),
       totaleContributi:toNumber(contributiTotali)},
     imponibile:toNumber(I),irpefNetta:toNumber(arrotondaCentesimi(netta)),
     integrazioni:toNumber(arrotondaCentesimi(cuneo.importo)+arrotondaCentesimi(ti)),
     aliquotaContributivaEffettiva:RAL>0n?toNumber(mul(div(contributiTotali,RAL),dec('100'))):0,
-    riconciliazione:{verificata:conti.verificata&&sommeDichiarate(voci),
+    riconciliazione:{verificata:conti.verificata&&
+      (spendibili===0n||contiBenefit.verificata&&contiBenefit.netto===spendibili)&&
+      sommeDichiarate(voci),
       identita:'RAL − contributi − imposte + integrazioni = netto annuo'}};
 }
 
@@ -692,27 +769,17 @@ const parseRal=s=>{const t=String(s).trim().replace(/\s|€/g,'');
    La prima RAL che le supera va quindi trovata passando dalla stessa funzione
    contributiva usata dal calcolo. In questo modo un cambio di aliquota o di
    arrotondamento non lascia in giro una RAL diventata falsa. */
-function ralOltreImponibile(imponibileInput){
-  const limite=dec(String(imponibileInput));
-  let basso=0n,alto=(limite/CENT+1n)*CENT;
-  while(imponibile(alto)<=limite)alto*=2n;
-  while(basso+CENT<alto){
-    const mezzo=((basso+alto)/(2n*CENT))*CENT;
-    if(imponibile(mezzo)>limite)alto=mezzo;else basso=mezzo;
-  }
-  return (toNumber(alto)).toFixed(2);
-}
-function primaRal(predicato,massimo){
+function primaRal(predicato,massimo,opzioni={}){
   let basso=0n,alto=dec(String(massimo));
-  if(!predicato(calcola(toNumber(alto))))throw new RangeError('Evento non trovato nel perimetro');
+  if(!predicato(calcola(toNumber(alto),opzioni)))throw new RangeError('Evento non trovato nel perimetro');
   while(basso+CENT<alto){
     const mezzo=((basso+alto)/(2n*CENT))*CENT;
-    if(predicato(calcola(toNumber(mezzo))))alto=mezzo;else basso=mezzo;
+    if(predicato(calcola(toNumber(mezzo),opzioni)))alto=mezzo;else basso=mezzo;
   }
   return toNumber(alto).toFixed(2);
 }
 const EVENTI_NAZIONALI=[
-  {ral:()=>primaRal(r=>r.voci.some(v=>v.id==='ti'),15000),
+  {ral:opzioni=>primaRal(r=>r.voci.some(v=>v.id==='ti'),15000,opzioni),
     causa:'si attiva il trattamento integrativo'},
   {imponibile:8500,causa:'la somma non imponibile passa dal 7,1% al 5,3%'},
   {imponibile:15000,causa:'decade il trattamento integrativo (imponibile 15.000 €)'},
@@ -758,6 +825,7 @@ const centesimi=n=>Math.round(n*100)/100;
 function soglie(opzioni={}){
   const geo=GEOGRAFIA.risolvi(opzioni.comune||'F205');
   const nucleo=opzioni.nucleo||[];
+  const benefit=valutaBenefit(opzioni,nucleo);
   /* La chiave porta anche il nucleo: le detrazioni di famiglia
      possono azzerare l'IRPEF netta, e allora un salto che esiste
      per un contribuente solo non esiste più per una famiglia.
@@ -765,13 +833,15 @@ function soglie(opzioni={}){
      nelle Marche e in Veneto: due nuclei identici tranne quel flag
      hanno soglie diverse, e senza il flag si scambierebbero. */
   const chiave=geo.comune.catastale+'|'+
-    nucleo.map(f=>`${f.tipo}${f.eta??''}${f.disabilita?'*':''}:${f.reddito??0}`).join(',');
+    nucleo.map(f=>`${f.tipo}${f.eta??''}${f.disabilita?'*':''}:${f.reddito??0}`).join(',')+'|'+
+    `${toNumber(benefit.fringe)}:${benefit.buoni.tipo}:${toNumber(benefit.buoni.valoreUnitario)}:${benefit.buoni.numero}`;
   if(CACHE_SOGLIE.has(chiave))return CACHE_SOGLIE.get(chiave);
   const risultato=[];
   for(const evento of EVENTI_NAZIONALI){
-    const ral=evento.ral?evento.ral():ralOltreImponibile(evento.imponibile);
-    const sopra=calcola(ral,{comune:geo.comune.catastale,nucleo}),
-      sotto=calcola((Number(ral)-.01).toFixed(2),{comune:geo.comune.catastale,nucleo});
+    const ral=evento.ral?evento.ral(opzioni)
+      :primaRal(r=>r.imponibile>evento.imponibile,Math.max(200000,evento.imponibile*3),opzioni);
+    const sopra=calcola(ral,opzioni),
+      sotto=calcola((Number(ral)-.01).toFixed(2),opzioni);
     risultato.push({ral:Number(ral),imponibile:evento.imponibile??null,ambito:'nazionale',
       causa:evento.causa,delta:centesimi(sopra.kpi.nettoAnnuo-sotto.kpi.nettoAnnuo)});
   }
@@ -779,9 +849,10 @@ function soglie(opzioni={}){
     ['regionale',geo.regionale,geo.regione.nome,'addreg'],
     ['comunale',geo.comunale,geo.comune.nome,'addcom'],
   ])for(const confine of confiniRegola(regola,nucleo)){
-    const ral=ralOltreImponibile(confine.imponibile);
-    const sopra=calcola(ral,{comune:geo.comune.catastale,nucleo}),
-      sotto=calcola((Number(ral)-.01).toFixed(2),{comune:geo.comune.catastale,nucleo});
+    const ral=primaRal(r=>r.imponibile>confine.imponibile,
+      Math.max(200000,confine.imponibile*3),opzioni);
+    const sopra=calcola(ral,opzioni),
+      sotto=calcola((Number(ral)-.01).toFixed(2),opzioni);
     const delta=centesimi(voceImporto(sopra,id)-voceImporto(sotto,id));
     if(Math.abs(delta)<=.01)continue; // cambio di pendenza, non salto
     risultato.push({ral:Number(ral),imponibile:confine.imponibile,ambito,

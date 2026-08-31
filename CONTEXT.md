@@ -26,8 +26,9 @@ un'estensione di questo.
 _Avoid_: modalità, profilo, caso
 
 **Imponibile**:
-La RAL meno i contributi previdenziali. È la base di quasi tutto ciò che segue:
-IRPEF, detrazioni, addizionali, cuneo.
+La RAL più le eventuali quote imponibili dei benefit, meno i contributi
+previdenziali. È la base di quasi tutto ciò che segue: IRPEF, detrazioni,
+addizionali, cuneo.
 _Avoid_: reddito, base imponibile, netto contributivo
 
 **Capienza**:
@@ -37,13 +38,13 @@ una detrazione da 1.955 € entra per 400.
 _Avoid_: cap, clamp, limite
 
 **Somma**:
-L'identità contabile in cui una voce entra. Oggi ne esiste una: il netto del
-lavoratore. Il costo azienda ne sarà una seconda. La guardia di riconciliazione
-verifica una somma alla volta.
+L'identità contabile in cui una voce entra. Oggi ne esistono due: il netto del
+lavoratore e i benefit spendibili. Il costo azienda ne sarà un'altra. La guardia
+di riconciliazione verifica una somma alla volta.
 _Avoid_: totale, gruppo, categoria
 
 **Riconciliazione**:
-Il controllo che le voci di una somma, applicate alla RAL, ricostruiscano
+Il controllo che le voci di una somma, applicate alla sua base, ricostruiscano
 esattamente il risultato dichiarato. È una guardia, non una prova di correttezza:
 dice che i conti tornano, non che le aliquote sono giuste.
 _Avoid_: quadratura, check, validazione

@@ -21,6 +21,8 @@ del 21 febbraio 2026.
 | `motore.test.js` | la matrice di prova |
 | `righe.js` | l'adapter che trasforma ogni Voce in una Riga |
 | `righe.test.js` | le prove della seam Voce → Riga |
+| `sezioni.js` | i riepiloghi delle due sezioni facoltative del modulo, e quali partono aperte |
+| `sezioni.test.js` | le prove di quei riepiloghi |
 | `fonti.js` | il catalogo delle fonti normative usato da pagina e adapter |
 | `geografia.js` | la piccola interface per elenchi dipendenti e risoluzione per codice catastale |
 | `dati-addizionali-2026.js` | lo snapshot runtime generato da Istat e MEF |
@@ -29,8 +31,8 @@ del 21 febbraio 2026.
 
 ## Come si apre
 
-Doppio clic su `index.html`, tenendo `draftsman.css`, `motore.js`, `righe.js` e `fonti.js`
-nella stessa cartella. Nessuna dipendenza, nessun passo di build, nessuna richiesta di rete:
+Doppio clic su `index.html`, tenendo `draftsman.css`, `motore.js`, `righe.js`, `sezioni.js`
+e `fonti.js` nella stessa cartella. Nessuna dipendenza, nessun passo di build, nessuna richiesta di rete:
 Archivo, Instrument Sans e JetBrains Mono sono incorporati in `draftsman.css`, quindi le
 pagine funzionano anche offline.
 
@@ -97,7 +99,7 @@ detrazioni con la capienza, IRPEF netta, addizionali — dovute solo se l'IRPEF 
 positiva — e integrazioni di legge. Troncamento a quattro decimali sui rapporti dell'art. 13
 e su quelli dell'art. 12, dove la norma lo impone (art. 12 c. 4, art. 13 c. 6).
 
-Versione delle regole: `regole-2026-v2`. Fonti primarie, tutte citate nella pagina:
+Versione delle regole: `regole-2026-v4`. Fonti primarie, tutte citate nella pagina:
 leggi di bilancio 2025 e 2026, TUIR, circolari INPS, Istat e MEF. Le pubblicazioni
 comunali 2026 si sovrappongono alla disciplina 2025 prorogata; ogni regola conserva
 annualità, `asOf`, stato definitivo/provvisorio ed estremi disponibili della delibera.
@@ -120,6 +122,19 @@ passa quel risultato ad `applicaMensilita()`, che divide il netto annuo già cal
 È la dimostrazione a schermo di una tesi del modello — le mensilità sono presentazione,
 non calcolo. Se richiedessero un ricalcolo, la pagina direbbe il contrario di quello che
 afferma.
+
+## Benefit e valore del pacchetto
+
+`calcola(ral, { welfare, fringe, buoniPasto })` mantiene separati il denaro e i valori
+spendibili. `welfare` è un importo annuo già qualificato come esente; `fringe` applica nel
+2026 la soglia integrale di 1.000 €, elevata a 2.000 € in presenza di un figlio fiscalmente
+a carico; `buoniPasto` porta `{ tipo, valoreUnitario, numero }`, con tipo `elettronici` o
+`cartacei`. La quota oltre 8 € o 4 € per titolo è imponibile.
+
+Il risultato conserva `kpi.nettoAnnuo` per compatibilità e lo espone anche come
+`kpi.nettoInBusta`; aggiunge `benefitSpendibili`, `valorePacchetto` e la media mensile dei
+buoni come puro dato di presentazione. Il valore nominale dei benefit non entra mai nel netto
+come se fosse denaro libero.
 
 ## Il nucleo familiare
 

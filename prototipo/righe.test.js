@@ -35,6 +35,8 @@ test.describe('adapter Voce → Riga',()=>{
        è la condizione perché la pagina di oggi resti quella di ieri.
        Le loro fonti si esercitano qui sotto, con un nucleo. */
     for(const voce of calcola('35000',{nucleo:NUCLEO}).voci)fonti.add(voce.fonte);
+    for(const voce of calcola('35000',{welfare:1,fringe:1,
+      buoniPasto:{tipo:'elettronici',valoreUnitario:1,numero:1}}).voci)fonti.add(voce.fonte);
     const statiche=[...fonti].filter(f=>typeof f==='string');
     assert.deepEqual(statiche.sort(),Object.keys(FONTI).filter(k=>!['lomb','mi'].includes(k)).sort());
     assert.ok([...fonti].some(f=>f.tipo==='regionale'));
@@ -72,6 +74,36 @@ test.describe('adapter Voce → Riga',()=>{
     assert.throws(()=>componiRighe([{...ivs,fonte:'ignota'}]),/Fonte sconosciuta: ignota/);
     const {aliquota,...incompleta}=ivs;
     assert.throws(()=>componiRighe([incompleta]),/Voce ivs: fatto mancante aliquota/);
+  });
+});
+
+test.describe('le righe dei benefit',()=>{
+  const righeBenefit=opzioni=>componiRighe(calcola('35000',opzioni).voci)
+    .filter(r=>['welfare','fringe','buoni'].includes(r.id));
+
+  test('welfare: dichiara che l’esenzione è assunta, non certificata',()=>{
+    const [r]=righeBenefit({welfare:1200});
+    assert.equal(r.titolo,'Welfare aziendale esente dichiarato');
+    assert.match(r.formula,/1\.200,00 € esenti/);
+    assert.match(r.formula,/requisiti del piano/);
+    assert.equal(r.fonte.titolo,'TUIR, art. 51 c. 2 lett. f–f-quater');
+  });
+
+  test('fringe: rende visibile la regola del superamento integrale',()=>{
+    const [r]=righeBenefit({fringe:1000.01});
+    assert.equal(r.titolo,'Fringe benefit');
+    assert.match(r.formula,/soglia 1\.000/);
+    assert.match(r.formula,/intero valore imponibile: 1\.000,01/);
+    assert.equal(r.fonte.titolo,'L. 207/2024, art. 1 c. 390–391');
+  });
+
+  test('buoni: racconta tipo, unità, totale, quota esente e imponibile',()=>{
+    const [r]=righeBenefit({buoniPasto:{tipo:'elettronici',valoreUnitario:10,numero:200}});
+    assert.equal(r.titolo,'Buoni pasto elettronici');
+    assert.match(r.formula,/200 × 10,00 € = 2\.000,00 €/);
+    assert.match(r.formula,/esente 1\.600,00 €/);
+    assert.match(r.formula,/imponibile 400,00 €/);
+    assert.equal(r.fonte.titolo,'TUIR, art. 51 c. 2 lett. c');
   });
 });
 
