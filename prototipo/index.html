@@ -43,6 +43,7 @@ body{padding-bottom:0}
   background:var(--bg-raised);padding:clamp(20px,3vw,32px);box-shadow:var(--lift-md) var(--line-solid)}
 .calcbox.is-dirty{box-shadow:var(--lift-md) var(--c-amber)}
 .form-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:var(--s-6);align-items:start}
+.form-grid--compenso{grid-template-columns:minmax(0,1.05fr) minmax(0,1.35fr) minmax(150px,.55fr)}
 .geo-grid{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:var(--s-6)}
 .calcrow{display:flex;align-items:center;gap:var(--s-4);flex-wrap:wrap;margin-top:var(--s-2)}
 .dirty{display:none;align-items:center;gap:8px;font:400 var(--t-xs)/1.4 var(--font-mono);
@@ -50,7 +51,6 @@ body{padding-bottom:0}
 .is-dirty .dirty{display:flex}
 .field--error .input{border-color:var(--err-text);box-shadow:var(--lift-sm) var(--c-signal-red)}
 .ccnl-field{display:grid;gap:var(--s-3)}
-.ccnl-field>div{display:grid;gap:var(--s-2)}
 .ccnl-field .hint{margin:0}
 .ccnl-meta{display:flex;gap:var(--s-2);align-items:baseline;flex-wrap:wrap}
 .ccnl-reset{border:0;background:none;padding:0;cursor:pointer;color:inherit;
@@ -314,7 +314,7 @@ body{padding-bottom:0}
   text-decoration-thickness:1px;text-underline-offset:3px}
 .sec a:hover,.pane a:hover,.voce a:hover{text-decoration-color:var(--c-flux);
   text-decoration-thickness:2px}
-@media(max-width:900px){.form-grid,.geo-grid{grid-template-columns:1fr}}
+@media(max-width:900px){.form-grid,.form-grid--compenso,.geo-grid{grid-template-columns:1fr}}
 @media(max-width:600px){
   .anchorbar .mini{display:none}
   .anchors{flex-wrap:nowrap;overflow-x:auto}
@@ -596,7 +596,7 @@ function form(st){
   const opts=(xs,value,label)=>xs.map(x=>{const v=Object.hasOwn(x,'catastale')?x.catastale:x.id;
     return`<option value="${v}" ${v==value?'selected':''}>${esc(label(x))}</option>`;}).join('');
   return `<div class="calcbox">
-    <div class="form-grid">
+    <div class="form-grid form-grid--compenso">
       <div class="field ${st.errore?'field--error':''}">
         <label class="label" for="ral">Retribuzione annua lorda</label>
         <div class="ingroup">
@@ -607,18 +607,13 @@ function form(st){
         ${err||`<p class="hint" id="ralhelp">Il calcolo usa il comune di domicilio fiscale selezionato.</p>`}
       </div>
       <div class="field ccnl-field">
-        <div><label class="label" for="ccnl">Contratto collettivo</label>
-          <select class="select" id="ccnl">
-            <option value="">Nessun CCNL selezionato</option>
-            ${CCNL_CATALOGO.CCNL.map(c=>`<option value="${c.id}" ${st.ccnl===c.id?'selected':''}>
-              ${esc(c.nome)} — ${esc(c.parti)}${c.codiceCnel?` · CNEL ${c.codiceCnel}`:''}
-            </option>`).join('')}
-          </select></div>
-        <div><label class="label" id="mlab">Mensilità</label>
-        <div class="segmented" role="group" aria-labelledby="mlab">
-          ${MENSILITA_AMMESSE.map(m=>
-            `<button data-m="${m}" aria-pressed="${st.mensilita===m}">${m}</button>`).join('')}
-        </div></div>
+        <label class="label" for="ccnl">Contratto collettivo</label>
+        <select class="select" id="ccnl">
+          <option value="">Nessun CCNL selezionato</option>
+          ${CCNL_CATALOGO.CCNL.map(c=>`<option value="${c.id}" ${st.ccnl===c.id?'selected':''}>
+            ${esc(c.nome)} — ${esc(c.parti)}${c.codiceCnel?` · CNEL ${c.codiceCnel}`:''}
+          </option>`).join('')}
+        </select>
         ${contratto?`<p class="hint ccnl-meta">
           <span>${statoMensilita.personalizzato
             ?`Valore personalizzato; normalmente ${contratto.mensilita}`
@@ -626,7 +621,14 @@ function form(st){
             <a href="${contratto.fonte.url}" target="_blank" rel="noopener noreferrer">Fonte</a></span>
           ${statoMensilita.personalizzato?`<button type="button" class="ccnl-reset" id="ccnl-ripristina">Ripristina suggerimento</button>`:''}
           <span>Non cambia il calcolo, che resta quello del lavoro dipendente privato.</span>
-        </p>`:`<p class="hint">Divide il netto annuo per mostrarne la media. Non cambia il calcolo.</p>`}
+        </p>`:''}
+      </div>
+      <div class="field">
+        <label class="label" for="mensilita">Mensilità</label>
+        <select class="select" id="mensilita">
+          ${MENSILITA_AMMESSE.map(m=>`<option value="${m}" ${st.mensilita===m?'selected':''}>${m}</option>`).join('')}
+        </select>
+        <p class="hint">Divide il netto annuo per mostrarne la media. Non cambia il calcolo.</p>
       </div>
     </div>
     <div class="form-grid geo-grid">
@@ -1079,8 +1081,6 @@ function segnaFuoco(){
   if(r)return `tr[data-voce="${r.dataset.voce}"] .lbl`;
   const b=a.closest('[data-band]');
   if(b)return `[data-band="${b.dataset.band}"]`;
-  const m=a.closest('[data-m]');
-  if(m)return `[data-m="${m.dataset.m}"]`;
   const n=a.closest('[data-nucleo-rimuovi]');
   if(n)return `[data-nucleo-rimuovi="${n.dataset.nucleoRimuovi}"]`;
   return a.id?'#'+a.id:null;
@@ -1153,6 +1153,7 @@ document.addEventListener('change',e=>{
     st.ccnl=e.target.value;
     return impostaMensilita(CCNL_CATALOGO.suggerisciMensilita(st.ccnl,st.mensilita));
   }
+  if(e.target.id==='mensilita')return impostaMensilita(Number(e.target.value));
   if(e.target.id==='buoni-tipo'){
     st.buoniTipo=e.target.value;if(st.res)st.dirty=true;return render(true);
   }
@@ -1206,7 +1207,7 @@ document.addEventListener('click',e=>{
     if(st.res)st.dirty=true;
     return render(true);
   }
-  const t=e.target.closest('#go,#reset,#ccnl-ripristina,[data-m],[data-voce],[data-band]');
+  const t=e.target.closest('#go,#reset,#ccnl-ripristina,[data-voce],[data-band]');
   if(!t)return;
   if(t.id==='go')return commit();
   if(t.id==='reset'){st.res=null;st.ralRaw='';st.ccnl='';st.mensilita=13;
@@ -1218,10 +1219,6 @@ document.addEventListener('click',e=>{
     st.sezioni={nucleo:false,pacchetto:false};return render();}
   if(t.id==='ccnl-ripristina'){
     return impostaMensilita(CCNL_CATALOGO.suggerisciMensilita(st.ccnl,st.mensilita));}
-  if(t.hasAttribute('data-m')){
-    // Mensilita' e' presentazione, non calcolo: si divide il netto annuo
-    // gia' calcolato, senza richiamare il motore.
-    return impostaMensilita(Number(t.dataset.m));}
   if(t.hasAttribute('data-voce')){
     st.aperta=st.aperta===t.dataset.voce?null:t.dataset.voce;return render(true);}
   if(t.hasAttribute('data-band')){
