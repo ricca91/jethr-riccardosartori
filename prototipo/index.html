@@ -49,6 +49,12 @@ body{padding-bottom:0}
   color:var(--warn-text)}
 .is-dirty .dirty{display:flex}
 .field--error .input{border-color:var(--err-text);box-shadow:var(--lift-sm) var(--c-signal-red)}
+.ccnl-field{display:grid;gap:var(--s-3)}
+.ccnl-field .hint{margin:0}
+.ccnl-meta{display:flex;gap:var(--s-2);align-items:baseline;flex-wrap:wrap}
+.ccnl-reset{border:0;background:none;padding:0;cursor:pointer;color:inherit;
+  font:inherit;text-decoration:underline;text-underline-offset:3px}
+.ccnl-reset:hover{text-decoration-thickness:2px}
 
 /* € come prefisso: una casella affiancata, senza raggio */
 .ingroup{display:flex}
@@ -319,6 +325,7 @@ body{padding-bottom:0}
 <script src="dati-addizionali-2026.js"></script>
 <script src="geografia.js"></script>
 <script src="motore.js"></script>
+<script src="ccnl.js"></script>
 <script src="fonti.js"></script>
 <script src="righe.js"></script>
 <script src="sezioni.js"></script>
@@ -583,6 +590,8 @@ function form(st){
      una sola risposta, usata per accendere il riepilogo e per lo stato iniziale. */
   const configurate=sezioniAperte(st);
   const province=GEOGRAFIA_ITALIA.province(st.regione),comuni=GEOGRAFIA_ITALIA.comuni(st.provincia);
+  const contratto=CCNL_CATALOGO.trovaCcnl(st.ccnl);
+  const statoMensilita=CCNL_CATALOGO.statoMensilita(st.ccnl,st.mensilita);
   const opts=(xs,value,label)=>xs.map(x=>{const v=Object.hasOwn(x,'catastale')?x.catastale:x.id;
     return`<option value="${v}" ${v==value?'selected':''}>${esc(label(x))}</option>`;}).join('');
   return `<div class="calcbox">
@@ -596,13 +605,27 @@ function form(st){
         </div>
         ${err||`<p class="hint" id="ralhelp">Il calcolo usa il comune di domicilio fiscale selezionato.</p>`}
       </div>
-      <div class="field">
-        <label class="label" id="mlab">Mensilità</label>
+      <div class="field ccnl-field">
+        <div><label class="label" for="ccnl">Contratto collettivo</label>
+          <select class="select" id="ccnl">
+            <option value="">Nessun CCNL selezionato</option>
+            ${CCNL_CATALOGO.CCNL.map(c=>`<option value="${c.id}" ${st.ccnl===c.id?'selected':''}>
+              ${esc(c.nome)} — ${esc(c.parti)}${c.codiceCnel?` · CNEL ${c.codiceCnel}`:''}
+            </option>`).join('')}
+          </select></div>
+        <div><label class="label" id="mlab">Mensilità</label>
         <div class="segmented" role="group" aria-labelledby="mlab">
           ${MENSILITA_AMMESSE.map(m=>
             `<button data-m="${m}" aria-pressed="${st.mensilita===m}">${m}</button>`).join('')}
-        </div>
-        <p class="hint">Divide il netto annuo per mostrarne la media. Non cambia il calcolo.</p>
+        </div></div>
+        ${contratto?`<p class="hint ccnl-meta">
+          <span>${statoMensilita.personalizzato
+            ?`Valore personalizzato; normalmente ${contratto.mensilita}`
+            :`Normalmente ${contratto.mensilita} mensilità`} · riferimento ${new Intl.DateTimeFormat('it-IT').format(new Date(`${contratto.dataRiferimento}T00:00:00`))} ·
+            <a href="${contratto.fonte.url}" target="_blank" rel="noopener noreferrer">Fonte</a></span>
+          ${statoMensilita.personalizzato?`<button type="button" class="ccnl-reset" id="ccnl-ripristina">Ripristina suggerimento</button>`:''}
+          <span>Non cambia il calcolo, che resta quello del lavoro dipendente privato.</span>
+        </p>`:`<p class="hint">Divide il netto annuo per mostrarne la media. Non cambia il calcolo.</p>`}
       </div>
     </div>
     <div class="form-grid geo-grid">
@@ -968,7 +991,7 @@ function vuoto(st){
    STATO E EVENTI
    ============================================================ */
 const GEO_DEFAULT=GEOGRAFIA_ITALIA.risolvi('F205');
-const st={ralRaw:'35.000',mensilita:13,regione:GEO_DEFAULT.provincia.regione,
+const st={ralRaw:'35.000',ccnl:'',mensilita:13,regione:GEO_DEFAULT.provincia.regione,
   provincia:GEO_DEFAULT.comune.provincia,comune:GEO_DEFAULT.comune.catastale,
   nucleo:[],nucleoCalcolato:null,
   welfareRaw:'',fringeRaw:'',buoniTipo:'elettronici',buoniValoreRaw:'',buoniNumeroRaw:'',
@@ -988,8 +1011,9 @@ function fromURL(){
   if(['elettronici','cartacei'].includes(p.get('bt')))st.buoniTipo=p.get('bt');
   if(p.has('bv'))st.buoniValoreRaw=p.get('bv');
   if(p.has('bn'))st.buoniNumeroRaw=p.get('bn');
-  const mensilita=Number(p.get('m'));
-  if(MENSILITA_AMMESSE.includes(mensilita))st.mensilita=mensilita;
+  const preferenza=CCNL_CATALOGO.preferenzaDaUrl(
+    p.get('ccnl')||'',p.get('m'),st.mensilita,MENSILITA_AMMESSE);
+  st.ccnl=preferenza.ccnl;st.mensilita=preferenza.mensilita;
   /* Un link che porta dei dati non deve nasconderli: la sezione che li
      contiene si apre da sola, quella vuota resta chiusa. */
   st.sezioni=sezioniAperte(st);
@@ -998,6 +1022,7 @@ function fromURL(){
 function toURL(){
   const p=new URLSearchParams();
   p.set('ral',st.ralRaw);p.set('m',String(st.mensilita));p.set('c',st.comune);
+  if(st.ccnl)p.set('ccnl',st.ccnl);
   /* Senza familiari dichiarati la query string resta quella di
      prima: la funzione è additiva anche nell'URL. */
   const nucleo=serializzaNucleo(st.nucleo);
@@ -1096,6 +1121,11 @@ function segnaSporco(campo){
   st.dirty=true;
   campo.closest('.calcbox')?.classList.add('is-dirty');
 }
+function impostaMensilita(mensilita){
+  st.mensilita=mensilita;
+  if(st.res)st.res=applicaMensilita(st.res,st.mensilita);
+  render(true);
+}
 document.addEventListener('input',e=>{
   const d=e.target.dataset||{};
   if(e.target.id==='ral'){st.ralRaw=e.target.value;return segnaSporco(e.target);}
@@ -1118,6 +1148,10 @@ document.addEventListener('input',e=>{
   }
 });
 document.addEventListener('change',e=>{
+  if(e.target.id==='ccnl'){
+    st.ccnl=e.target.value;
+    return impostaMensilita(CCNL_CATALOGO.suggerisciMensilita(st.ccnl,st.mensilita));
+  }
   if(e.target.id==='buoni-tipo'){
     st.buoniTipo=e.target.value;if(st.res)st.dirty=true;return render(true);
   }
@@ -1171,19 +1205,22 @@ document.addEventListener('click',e=>{
     if(st.res)st.dirty=true;
     return render(true);
   }
-  const t=e.target.closest('#go,#reset,[data-m],[data-voce],[data-band]');
+  const t=e.target.closest('#go,#reset,#ccnl-ripristina,[data-m],[data-voce],[data-band]');
   if(!t)return;
   if(t.id==='go')return commit();
-  if(t.id==='reset'){st.res=null;st.ralRaw='';st.aperta=null;st.errore=null;
+  if(t.id==='reset'){st.res=null;st.ralRaw='';st.ccnl='';st.mensilita=13;
+    st.regione=GEO_DEFAULT.provincia.regione;st.provincia=GEO_DEFAULT.comune.provincia;
+    st.comune=GEO_DEFAULT.comune.catastale;st.aperta=null;st.attiva='risultato';st.errore=null;
+    st.dirty=false;st.eggPending=false;
     st.nucleo=[];st.nucleoCalcolato=null;st.welfareRaw='';st.fringeRaw='';
     st.buoniTipo='elettronici';st.buoniValoreRaw='';st.buoniNumeroRaw='';
     st.sezioni={nucleo:false,pacchetto:false};return render();}
+  if(t.id==='ccnl-ripristina'){
+    return impostaMensilita(CCNL_CATALOGO.suggerisciMensilita(st.ccnl,st.mensilita));}
   if(t.hasAttribute('data-m')){
-    st.mensilita=Number(t.dataset.m);
     // Mensilita' e' presentazione, non calcolo: si divide il netto annuo
     // gia' calcolato, senza richiamare il motore.
-    if(st.res)st.res=applicaMensilita(st.res,st.mensilita);
-    return render(true);}
+    return impostaMensilita(Number(t.dataset.m));}
   if(t.hasAttribute('data-voce')){
     st.aperta=st.aperta===t.dataset.voce?null:t.dataset.voce;return render(true);}
   if(t.hasAttribute('data-band')){
