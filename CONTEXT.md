@@ -19,6 +19,19 @@ Una voce come appare a schermo: titolo, frase della formula, link alla fonte. La
 compone la pagina a partire dai numeri della voce.
 _Avoid_: voce, card, dettaglio
 
+**Opzione**:
+Una scelta che il chiamante può fare sul contesto di un calcolo: dove abiti, che
+contratto hai, chi hai a carico. È un'opzione anche se oggi il motore non la
+legge ancora — conta che qualcuno, prima o poi, la sceglierà.
+_Avoid_: parametro, impostazione, input, setting
+
+**Assunzione**:
+Qualcosa che il motore dà per scontato e che **nessuno selezionerà mai**:
+inquadramento impiegatizio privato, anno intero. Non è un'opzione con un default:
+è una scelta già fatta. Per questo non entra dall'ingresso — il motore la
+dichiara in uscita, così chi legge il risultato sa su cosa è calcolato.
+_Avoid_: default, ipotesi, preset, opzione
+
 **Regime**:
 L'insieme di regole che governa un rapporto di lavoro. Oggi ne esiste uno solo,
 il lavoro dipendente privato. La partita IVA sarà un secondo regime, non
