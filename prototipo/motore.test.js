@@ -314,10 +314,10 @@ test.describe('C — non-regressione',()=>{
     assert.equal(presentato.kpi.mediaMensile,2002.47);
   });
 
-  test('12, 13 e 14 cambiano la media, mai il risultato annuale',()=>{
+  test('da 12 a 16 mensilità cambia la media, mai il risultato annuale',()=>{
     for(const ral of ['0','12000','26000','35000','60000','150000']){
       const annuale=calcola(ral);
-      for(const mensilita of [12,13,14]){
+      for(const mensilita of [12,13,14,15,16]){
         const presentato=applicaMensilita(annuale,mensilita);
         assert.equal(presentato.input.mensilita,mensilita);
         assert.equal(presentato.kpi.nettoAnnuo,annuale.kpi.nettoAnnuo);
@@ -327,9 +327,9 @@ test.describe('C — non-regressione',()=>{
       }
     }
     const annuale=calcola('35000');
-    assert.deepEqual([12,13,14].map(m=>applicaMensilita(annuale,m).kpi.mediaMensile),
-      [2169.35,2002.47,1859.44]);
-    for(const mensilita of [11,15,16])
+    assert.deepEqual([12,13,14,15,16].map(m=>applicaMensilita(annuale,m).kpi.mediaMensile),
+      [2169.35,2002.47,1859.44,1735.48,1627.01]);
+    for(const mensilita of [11,17])
       assert.throws(()=>applicaMensilita(annuale,mensilita),RangeError);
   });
 

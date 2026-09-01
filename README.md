@@ -122,7 +122,7 @@ due decimali.
 datore e un reddito. Comune, familiari a carico, welfare esente dichiarato, fringe benefit e
 buoni pasto sono selezionabili; premi e agevolazioni personali restano fuori.
 
-**Che numero è.** Il netto annuale maturato sulla RAL, e la sua media su 12, 13 o 14 mensilità.
+**Che numero è.** Il netto annuale maturato sulla RAL, e la sua media da 12 a 16 mensilità.
 Non è la previsione del singolo cedolino né del bonifico che arriva a gennaio.
 
 **Il 9,19% non vale per ogni dipendente privato.** Settore, inquadramento INPS, dimensione del

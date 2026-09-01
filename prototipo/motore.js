@@ -868,11 +868,11 @@ function soglie(opzioni={}){
 const SALTI=Object.freeze(soglie().map(s=>Object.freeze([s.ral.toFixed(2),s.causa])));
 
 /* ---------- mensilità: presentazione, non calcolo ----------
-   Il selettore 12/13/14 non rientra nel motore fiscale: divide un
+   Il selettore 12–16 non rientra nel motore fiscale: divide un
    netto annuo già calcolato. Applicarlo così — invece di
    richiamare calcola() — è ciò che rende vera a schermo la tesi
    del contratto: cambiare mensilità non può muovere il netto. */
-const MENSILITA_AMMESSE=Object.freeze([12,13,14]);
+const MENSILITA_AMMESSE=Object.freeze([12,13,14,15,16]);
 function applicaMensilita(res,mensilita=13){
   if(!MENSILITA_AMMESSE.includes(mensilita))
     throw new RangeError(`Mensilità non ammessa: ${mensilita}`);
