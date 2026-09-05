@@ -1,3 +1,11 @@
 {
-  "outputDirectory": "prototipo"
+  "outputDirectory": "prototipo",
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "jethr.riccsartori.com" }],
+      "destination": "https://www.dovevalatuaral.com/:path*",
+      "permanent": true
+    }
+  ]
 }

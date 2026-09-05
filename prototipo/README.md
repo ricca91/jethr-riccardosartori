@@ -187,18 +187,20 @@ a carico, perché da entrambi i lati della soglia l'imposta è già zero.
 
 ## Come si pubblica
 
-La demo è un deploy statico della sola cartella, senza passo di build:
+La demo è un deploy statico senza passo di build. Il comando va eseguito dalla root del
+repository, così Vercel applica `vercel.json` (incluso il redirect del dominio legacy):
 
 ```
-vercel deploy --prod prototipo
+vercel deploy --prod
 ```
 
-Il progetto Vercel si chiama `jethr` e risponde su **https://jethr.riccsartori.com**.
+Il progetto Vercel si chiama `dovevalatuaral.com` e risponde su **https://www.dovevalatuaral.com**.
+Il vecchio hostname `jethr.riccsartori.com` reindirizza permanentemente al nuovo dominio.
 
 Il deploy parte dalla riga di comando, non da un push: il repo **non** è collegato a
 Vercel. `git push` aggiorna GitHub e lascia la demo com'era. Se una copia nuova del repo
 non è ancora agganciata al progetto, la si aggancia una volta sola:
 
 ```
-vercel link --yes --project jethr
+vercel link --yes --project dovevalatuaral.com
 ```
